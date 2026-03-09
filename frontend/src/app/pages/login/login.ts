@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth';
@@ -10,7 +10,7 @@ import { AuthService } from '../../services/auth';
   styleUrl: './login.scss',
 })
 export class Login {
-  private authService = inject(AuthService);
+  protected authService = inject(AuthService);
   private fb = inject(FormBuilder);
 
   loginForm = this.fb.group({
@@ -18,21 +18,13 @@ export class Login {
     password: ['', Validators.required],
   });
 
-  errorMessage = signal('');
-
   onSubmit(): void {
-    this.errorMessage.set('');
-
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
-      this.errorMessage.set('Bitte alle Felder ausfüllen.');
       return;
     }
 
     const { usernameOrEmail, password } = this.loginForm.value;
-    const success = this.authService.login(usernameOrEmail!, password!);
-    if (!success) {
-      this.errorMessage.set('Ungültige Anmeldedaten.');
-    }
+    this.authService.login(usernameOrEmail!, password!);
   }
 }

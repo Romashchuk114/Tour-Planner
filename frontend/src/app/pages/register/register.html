@@ -2,8 +2,8 @@
   <h1 class="title">Registrieren</h1>
 
   <form class="form-card" [formGroup]="registerForm" (ngSubmit)="onSubmit()">
-    @if (errorMessage()) {
-      <p class="error">{{ errorMessage() }}</p>
+    @if (authService.errorMessage()) {
+      <p class="error">{{ authService.errorMessage() }}</p>
     }
 
     <label class="field">

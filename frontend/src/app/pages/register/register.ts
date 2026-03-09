@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth';
@@ -10,7 +10,7 @@ import { AuthService } from '../../services/auth';
   styleUrl: './register.scss',
 })
 export class Register {
-  private authService = inject(AuthService);
+  protected authService = inject(AuthService);
   private fb = inject(FormBuilder);
 
   registerForm = this.fb.group({
@@ -19,21 +19,13 @@ export class Register {
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
 
-  errorMessage = signal('');
-
   onSubmit(): void {
-    this.errorMessage.set('');
-
     if (this.registerForm.invalid) {
       this.registerForm.markAllAsTouched();
-      this.errorMessage.set('Bitte alle Felder korrekt ausfüllen.');
       return;
     }
 
     const { username, email, password } = this.registerForm.value;
-    const success = this.authService.register(username!, email!, password!);
-    if (!success) {
-      this.errorMessage.set('Registrierung fehlgeschlagen.');
-    }
+    this.authService.register(username!, email!, password!);
   }
 }
