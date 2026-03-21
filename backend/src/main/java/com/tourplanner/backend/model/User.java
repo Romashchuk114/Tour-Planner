@@ -1,4 +1,4 @@
-package com.tourplanner.backend.business;
+package com.tourplanner.backend.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;

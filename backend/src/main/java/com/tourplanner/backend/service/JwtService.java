@@ -1,6 +1,7 @@
 package com.tourplanner.backend.service;
 
-import com.tourplanner.backend.business.User;
+import com.tourplanner.backend.model.User;
+import com.tourplanner.backend.config.AuthenticatedUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -30,8 +31,11 @@ public class JwtService {
                 .compact();
     }
 
-    public Long extractUserId(String token) {
-        return Long.parseLong(extractClaims(token).getSubject());
+    public AuthenticatedUser extractUser(String token) {
+        Claims claims = extractClaims(token);
+        Long id = Long.parseLong(claims.getSubject());
+        String username = claims.get("username", String.class);
+        return new AuthenticatedUser(id, username);
     }
 
     public boolean isTokenValid(String token) {

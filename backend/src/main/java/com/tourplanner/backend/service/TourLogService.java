@@ -1,16 +1,16 @@
 package com.tourplanner.backend.service;
 
-import com.tourplanner.backend.business.Tour;
-import com.tourplanner.backend.business.TourLog;
+import com.tourplanner.backend.model.Tour;
+import com.tourplanner.backend.model.TourLog;
 import com.tourplanner.backend.data.TourLogRepository;
 import com.tourplanner.backend.data.TourRepository;
-import com.tourplanner.backend.presentation.dto.TourLogRequestDTO;
-import com.tourplanner.backend.presentation.dto.TourLogResponseDTO;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -21,51 +21,51 @@ public class TourLogService {
     private final TourLogRepository tourLogRepository;
     private final TourRepository tourRepository;
 
-    public TourLogResponseDTO create(Long tourId, Long userId, TourLogRequestDTO dto) {
+    @Transactional
+    public TourLog create(Long tourId, Long userId, TourLogRequestParams params) {
         Tour tour = findTourByUser(tourId, userId);
 
         TourLog tourLog = new TourLog();
         tourLog.setTour(tour);
-        tourLog.setDateTime(dto.getDateTime());
-        tourLog.setComment(dto.getComment());
-        tourLog.setDifficulty(dto.getDifficulty());
-        tourLog.setTotalDistance(dto.getTotalDistance());
-        tourLog.setTotalTime(dto.getTotalTime());
-        tourLog.setRating(dto.getRating());
+        mapFields(tourLog, params);
 
         TourLog saved = tourLogRepository.save(tourLog);
         log.info("TourLog created: id={}, tourId={}", saved.getId(), tourId);
-        return new TourLogResponseDTO(saved);
+        return saved;
     }
 
-    public List<TourLogResponseDTO> getByTourId(Long tourId, Long userId) {
+    @Transactional(readOnly = true)
+    public List<TourLog> getByTourId(Long tourId, Long userId) {
         findTourByUser(tourId, userId);
-        return tourLogRepository.findByTourIdOrderByDateTimeDesc(tourId).stream()
-                .map(TourLogResponseDTO::new)
-                .toList();
+        return tourLogRepository.findByTourIdOrderByDateTimeDesc(tourId);
     }
 
-    public TourLogResponseDTO update(Long tourId, Long logId, Long userId, TourLogRequestDTO dto) {
+    @Transactional
+    public TourLog update(Long tourId, Long logId, Long userId, TourLogRequestParams params) {
         findTourByUser(tourId, userId);
         TourLog tourLog = findLog(logId, tourId);
-
-        tourLog.setDateTime(dto.getDateTime());
-        tourLog.setComment(dto.getComment());
-        tourLog.setDifficulty(dto.getDifficulty());
-        tourLog.setTotalDistance(dto.getTotalDistance());
-        tourLog.setTotalTime(dto.getTotalTime());
-        tourLog.setRating(dto.getRating());
+        mapFields(tourLog, params);
 
         TourLog saved = tourLogRepository.save(tourLog);
         log.info("TourLog updated: id={}, tourId={}", saved.getId(), tourId);
-        return new TourLogResponseDTO(saved);
+        return saved;
     }
 
+    @Transactional
     public void delete(Long tourId, Long logId, Long userId) {
         findTourByUser(tourId, userId);
         TourLog tourLog = findLog(logId, tourId);
         tourLogRepository.delete(tourLog);
         log.info("TourLog deleted: id={}, tourId={}", logId, tourId);
+    }
+
+    private void mapFields(TourLog tourLog, TourLogRequestParams params) {
+        tourLog.setDateTime(params.dateTime());
+        tourLog.setComment(params.comment());
+        tourLog.setDifficulty(params.difficulty());
+        tourLog.setTotalDistance(params.totalDistance());
+        tourLog.setTotalTime(params.totalTime());
+        tourLog.setRating(params.rating());
     }
 
     private Tour findTourByUser(Long tourId, Long userId) {
@@ -85,4 +85,13 @@ public class TourLogService {
         }
         return tourLog;
     }
+
+    public record TourLogRequestParams(
+            LocalDateTime dateTime,
+            String comment,
+            Integer difficulty,
+            Double totalDistance,
+            Integer totalTime,
+            Integer rating
+    ) {}
 }

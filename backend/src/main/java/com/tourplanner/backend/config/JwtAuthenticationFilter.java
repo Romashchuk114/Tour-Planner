@@ -1,7 +1,5 @@
 package com.tourplanner.backend.config;
 
-import com.tourplanner.backend.business.User;
-import com.tourplanner.backend.data.UserRepository;
 import com.tourplanner.backend.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,7 +19,6 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -35,9 +32,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = authHeader.substring(7);
         if (jwtService.isTokenValid(token)) {
-            Long userId = jwtService.extractUserId(token);
-            User user = userRepository.findById(userId).orElse(null);
-            if (user != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            AuthenticatedUser user = jwtService.extractUser(token);
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(user, null, List.of());
                 SecurityContextHolder.getContext().setAuthentication(authToken);

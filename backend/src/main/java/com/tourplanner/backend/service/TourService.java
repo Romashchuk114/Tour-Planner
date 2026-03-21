@@ -1,15 +1,15 @@
 package com.tourplanner.backend.service;
 
-import com.tourplanner.backend.business.Tour;
-import com.tourplanner.backend.business.TransportType;
-import com.tourplanner.backend.business.User;
+import com.tourplanner.backend.model.Tour;
+import com.tourplanner.backend.model.TransportType;
+import com.tourplanner.backend.model.User;
 import com.tourplanner.backend.data.TourRepository;
-import com.tourplanner.backend.presentation.dto.TourRequestDTO;
-import com.tourplanner.backend.presentation.dto.TourResponseDTO;
+import com.tourplanner.backend.data.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -19,53 +19,63 @@ import java.util.List;
 public class TourService {
 
     private final TourRepository tourRepository;
+    private final UserRepository userRepository;
 
-    public TourResponseDTO create(User user, TourRequestDTO dto) {
-        TransportType type = parseTransportType(dto.getTransportType());
+    @Transactional
+    public Tour create(Long userId, TourRequestParams params) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User nicht gefunden: " + userId));
+        TransportType type = parseTransportType(params.transportType());
 
         Tour tour = new Tour();
         tour.setUser(user);
-        tour.setName(dto.getName());
-        tour.setDescription(dto.getDescription());
-        tour.setFromLocation(dto.getFromLocation());
-        tour.setToLocation(dto.getToLocation());
+        tour.setName(params.name());
+        tour.setDescription(params.description());
+        tour.setFromLocation(params.fromLocation());
+        tour.setToLocation(params.toLocation());
         tour.setTransportType(type);
-        tour.setTourDistance(dto.getTourDistance());
-        tour.setEstimatedTime(dto.getEstimatedTime());
+        tour.setTourDistance(params.tourDistance());
+        tour.setEstimatedTime(params.estimatedTime());
 
         Tour saved = tourRepository.save(tour);
-        log.info("Tour created: id={}, name={}, userId={}", saved.getId(), saved.getName(), user.getId());
-        return new TourResponseDTO(saved, 0);
+        log.info("Tour created: id={}, name={}, userId={}", saved.getId(), saved.getName(), userId);
+        return saved;
     }
 
-    public List<TourResponseDTO> getAllByUser(Long userId) {
-        return tourRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(tour -> new TourResponseDTO(tour, tour.getLogs().size()))
-                .toList();
+    @Transactional(readOnly = true)
+    public List<Tour> getAllByUser(Long userId) {
+        List<Tour> tours = tourRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        tours.forEach(tour -> tour.getLogs().size()); // initialize lazy collection
+        return tours;
     }
 
-    public TourResponseDTO getById(Long id, Long userId) {
+    @Transactional(readOnly = true)
+    public Tour getById(Long id, Long userId) {
         Tour tour = findTourByUser(id, userId);
-        return new TourResponseDTO(tour, tour.getLogs().size());
+        tour.getLogs().size(); // initialize lazy collection
+        return tour;
     }
 
-    public TourResponseDTO update(Long id, Long userId, TourRequestDTO dto) {
+    @Transactional
+    public Tour update(Long id, Long userId, TourRequestParams params) {
         Tour tour = findTourByUser(id, userId);
-        TransportType type = parseTransportType(dto.getTransportType());
+        TransportType type = parseTransportType(params.transportType());
 
-        tour.setName(dto.getName());
-        tour.setDescription(dto.getDescription());
-        tour.setFromLocation(dto.getFromLocation());
-        tour.setToLocation(dto.getToLocation());
+        tour.setName(params.name());
+        tour.setDescription(params.description());
+        tour.setFromLocation(params.fromLocation());
+        tour.setToLocation(params.toLocation());
         tour.setTransportType(type);
-        tour.setTourDistance(dto.getTourDistance());
-        tour.setEstimatedTime(dto.getEstimatedTime());
+        tour.setTourDistance(params.tourDistance());
+        tour.setEstimatedTime(params.estimatedTime());
 
         Tour saved = tourRepository.save(tour);
         log.info("Tour updated: id={}, userId={}", saved.getId(), userId);
-        return new TourResponseDTO(saved, saved.getLogs().size());
+        saved.getLogs().size(); // initialize lazy collection
+        return saved;
     }
 
+    @Transactional
     public void delete(Long id, Long userId) {
         Tour tour = findTourByUser(id, userId);
         tourRepository.delete(tour);
@@ -88,4 +98,14 @@ public class TourService {
             throw new IllegalArgumentException("Ungültiger Transporttyp: " + value);
         }
     }
+
+    public record TourRequestParams(
+            String name,
+            String description,
+            String fromLocation,
+            String toLocation,
+            String transportType,
+            Double tourDistance,
+            Integer estimatedTime
+    ) {}
 }

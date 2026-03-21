@@ -1,34 +1,33 @@
 package com.tourplanner.backend.presentation.dto;
 
-import com.tourplanner.backend.business.TourLog;
-import lombok.Getter;
+import com.tourplanner.backend.model.TourLog;
 
 import java.time.LocalDateTime;
 
-@Getter
-public class TourLogResponseDTO {
-
-    private final Long id;
-    private final Long tourId;
-    private final LocalDateTime dateTime;
-    private final String comment;
-    private final Integer difficulty;
-    private final Double totalDistance;
-    private final Integer totalTime;
-    private final Integer rating;
-    private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
-
+public record TourLogResponseDTO(
+        Long id,
+        Long tourId,
+        LocalDateTime dateTime,
+        String comment,
+        Integer difficulty,
+        Double totalDistance,
+        Integer totalTime,
+        Integer rating,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
+) {
     public TourLogResponseDTO(TourLog tourLog) {
-        this.id = tourLog.getId();
-        this.tourId = tourLog.getTour().getId();
-        this.dateTime = tourLog.getDateTime();
-        this.comment = tourLog.getComment();
-        this.difficulty = tourLog.getDifficulty();
-        this.totalDistance = tourLog.getTotalDistance();
-        this.totalTime = tourLog.getTotalTime();
-        this.rating = tourLog.getRating();
-        this.createdAt = tourLog.getCreatedAt();
-        this.updatedAt = tourLog.getUpdatedAt();
+        this(
+                tourLog.getId(),
+                tourLog.getTour().getId(),
+                tourLog.getDateTime(),
+                tourLog.getComment(),
+                tourLog.getDifficulty(),
+                tourLog.getTotalDistance(),
+                tourLog.getTotalTime(),
+                tourLog.getRating(),
+                tourLog.getCreatedAt(),
+                tourLog.getUpdatedAt()
+        );
     }
 }

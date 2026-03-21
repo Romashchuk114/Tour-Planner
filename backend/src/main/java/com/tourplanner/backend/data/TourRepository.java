@@ -1,6 +1,6 @@
 package com.tourplanner.backend.data;
 
-import com.tourplanner.backend.business.Tour;
+import com.tourplanner.backend.model.Tour;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
