@@ -1,15 +1,18 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ToursList } from './tour-list/tours-list';
 import { ToursDetail } from './tour-detail/tours-detail';
 import { TourFormComponent } from './tour-form/tour-form';
+import { TourLogFormComponent } from './tour-log-form/tour-log-form';
 import { TourService } from '../../services/tour.service';
+import { TourLogService } from '../../services/tour.log.service';
 import { Tour, TourRequest } from '../../models/tour.model';
+import { TourLog, TourLogRequest } from '../../models/tour-log.model';
 
 @Component({
   selector: 'app-tours',
   standalone: true,
-  imports: [CommonModule, ToursList, ToursDetail, TourFormComponent],
+  imports: [CommonModule, ToursList, ToursDetail, TourFormComponent, TourLogFormComponent],
   template: `
     <div class="tours-layout" [class.show-detail]="showDetail()">
 
@@ -31,27 +34,57 @@ import { Tour, TourRequest } from '../../models/tour.model';
           </button>
         }
 
-        <app-tour-detail (editTour)="onEditTour($event)"></app-tour-detail>
+        <app-tour-detail
+          (editTour)="onEditTour($event)"
+          (createLog)="onCreateLog()"
+          (editLog)="onEditLog($event)"
+          (deleteLog)="onDeleteLog($event)"
+        ></app-tour-detail>
       </div>
 
     </div>
 
     <!-- Tour Form Modal -->
-    @if (isFormOpen) {
+    @if (isTourFormOpen) {
       <app-tour-form
         [tour]="editingTour"
         (saved)="onSaveTour($event)"
-        (cancelled)="onCancelForm()"
+        (cancelled)="onCancelTourForm()"
       ></app-tour-form>
+    }
+
+    <!-- Tour Log Form Modal -->
+    @if (isLogFormOpen) {
+      <app-tour-log-form
+        [log]="editingLog"
+        (saved)="onSaveLog($event)"
+        (cancelled)="onCancelLogForm()"
+      ></app-tour-log-form>
     }
   `,
   styleUrls: ['./tours.scss']
 })
 export class Tours implements OnInit {
   public tourService = inject(TourService);
+  public logService = inject(TourLogService);
 
-  isFormOpen = false;
+  isTourFormOpen = false;
   editingTour: Tour | null = null;
+
+  isLogFormOpen = false;
+  editingLog: TourLog | null = null;
+
+  constructor() {
+    // Listen to changes in the selected tour to fetch logs automatically
+    effect(() => {
+      const tourId = this.tourService.selectedTourId();
+      if (tourId) {
+        this.logService.loadLogs(tourId);
+      } else {
+        this.logService.clearLogs();
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.tourService.loadTours();
@@ -65,14 +98,16 @@ export class Tours implements OnInit {
     this.tourService.selectTour(null);
   }
 
+  // --- TOUR ACTIONS ---
+
   onNewTour(): void {
     this.editingTour = null;
-    this.isFormOpen = true;
+    this.isTourFormOpen = true;
   }
 
   onEditTour(tour: Tour): void {
     this.editingTour = tour;
-    this.isFormOpen = true;
+    this.isTourFormOpen = true;
   }
 
   onSaveTour(request: TourRequest): void {
@@ -81,10 +116,44 @@ export class Tours implements OnInit {
     } else {
       this.tourService.createTour(request);
     }
-    this.isFormOpen = false;
+    this.isTourFormOpen = false;
   }
 
-  onCancelForm(): void {
-    this.isFormOpen = false;
+  onCancelTourForm(): void {
+    this.isTourFormOpen = false;
+  }
+
+  // --- LOG ACTIONS ---
+
+  onCreateLog(): void {
+    this.editingLog = null;
+    this.isLogFormOpen = true;
+  }
+
+  onEditLog(log: TourLog): void {
+    this.editingLog = log;
+    this.isLogFormOpen = true;
+  }
+
+  onSaveLog(request: TourLogRequest): void {
+    const tourId = this.tourService.selectedTourId();
+    if (!tourId) return;
+
+    if (this.editingLog) {
+      this.logService.updateLog(tourId, this.editingLog.id, request);
+    } else {
+      this.logService.createLog(tourId, request);
+    }
+    this.isLogFormOpen = false;
+  }
+
+  onDeleteLog(logId: number): void {
+    const tourId = this.tourService.selectedTourId();
+    if (!tourId) return;
+    this.logService.deleteLog(tourId, logId);
+  }
+
+  onCancelLogForm(): void {
+    this.isLogFormOpen = false;
   }
 }

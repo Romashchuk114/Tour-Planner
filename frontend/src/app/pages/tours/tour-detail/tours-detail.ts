@@ -2,11 +2,12 @@ import { Component, EventEmitter, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TourService } from '../../../services/tour.service';
 import { Tour } from '../../../models/tour.model';
+import { TourLogListComponent } from '../tour-log-list/tour-log-list';
 
 @Component({
   selector: 'app-tour-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TourLogListComponent],
   template: `
     @if (tourService.selectedTour(); as tour) {
       <div class="tour-detail-container">
@@ -43,7 +44,7 @@ import { Tour } from '../../../models/tour.model';
 
         @if (tour.description) {
           <div class="description">
-            <h3>Bearbeiten</h3>
+            <h3>Beschreibung</h3>
             <p>{{ tour.description }}</p>
           </div>
         }
@@ -57,12 +58,14 @@ import { Tour } from '../../../models/tour.model';
           </div>
         </div>
 
-        <!-- Tour Logs Placeholder -->
+        <!-- Tour Logs Section -->
         <div class="logs-section">
-          <h3>Tour Logs ({{ tour.logCount || 0 }})</h3>
-          <div class="logs-placeholder">
-            Logs component will go here
-          </div>
+          <h3>Tour Logs</h3>
+          <app-tour-log-list
+            (editLog)="onEditLog.emit($event)"
+            (createLog)="onCreateLog.emit()"
+            (deleteLogEmit)="onDeleteLog.emit($event)"
+          ></app-tour-log-list>
         </div>
       </div>
     } @else {
@@ -75,6 +78,9 @@ import { Tour } from '../../../models/tour.model';
 })
 export class ToursDetail {
   @Output() editTour = new EventEmitter<Tour>();
+  @Output() editLog = new EventEmitter<any>();
+  @Output() createLog = new EventEmitter<void>();
+  @Output() deleteLog = new EventEmitter<number>();
 
   public tourService = inject(TourService);
 
@@ -88,7 +94,16 @@ export class ToursDetail {
       if (confirm('Are you sure you want to delete this tour?')) {
         this.tourService.deleteTour(tourId);
       }
-      // TODO: Replace with ConfirmDialogComponent
     }
+  }
+
+  onEditLog = new EventEmitter<any>();
+  onCreateLog = new EventEmitter<void>();
+  onDeleteLog = new EventEmitter<number>();
+
+  constructor() {
+    this.onEditLog.subscribe((log) => this.editLog.emit(log));
+    this.onCreateLog.subscribe(() => this.createLog.emit());
+    this.onDeleteLog.subscribe((id) => this.deleteLog.emit(id));
   }
 }
