@@ -8,16 +8,21 @@ export interface User {
   email: string;
 }
 
+export interface AuthResponse extends User {
+  token: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
+
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
   private apiUrl = 'http://localhost:8080/api/auth';
+  private readonly TOKEN_KEY = 'auth_token';
 
-  // TODO: Testcode — sessionStorage durch JWT-basierte Auth ersetzen
-  private currentUser = signal<User | null>(this.loadUser());
+  private currentUser = signal<User | null>(this.loadUserFromToken());
   errorMessage = signal('');
 
   isLoggedIn = computed(() => this.currentUser() !== null);
@@ -25,10 +30,10 @@ export class AuthService {
 
   login(usernameOrEmail: string, password: string): void {
     this.errorMessage.set('');
-    this.http.post<User>(`${this.apiUrl}/login`, { usernameOrEmail, password }).subscribe({
-      next: (user) => {
-        this.setUser(user);
-        this.router.navigate(['/dashboard']);
+    this.http.post<AuthResponse>(`${this.apiUrl}/login`, { usernameOrEmail, password }).subscribe({
+      next: (response) => {
+        this.handleAuthSuccess(response);
+        this.router.navigate(['/tours']);
       },
       error: (err) => {
         this.errorMessage.set(err.error?.error ?? 'Anmeldung fehlgeschlagen.');
@@ -38,9 +43,11 @@ export class AuthService {
 
   register(username: string, email: string, password: string): void {
     this.errorMessage.set('');
-    this.http.post<User>(`${this.apiUrl}/register`, { username, email, password }).subscribe({
-      next: () => {
-        this.router.navigate(['/login']);
+    this.http.post<AuthResponse>(`${this.apiUrl}/register`, { username, email, password }).subscribe({
+      next: (response) => {
+        // Assuming registration also logs the user in
+        this.handleAuthSuccess(response);
+        this.router.navigate(['/tours']);
       },
       error: (err) => {
         this.errorMessage.set(err.error?.error ?? 'Registrierung fehlgeschlagen.');
@@ -50,19 +57,36 @@ export class AuthService {
 
   logout(): void {
     this.currentUser.set(null);
-    sessionStorage.removeItem('user'); // TODO: Testcode — durch JWT-Logout ersetzen
+    localStorage.removeItem(this.TOKEN_KEY);
     this.router.navigate(['/login']);
   }
 
-  // TODO: Testcode — durch JWT-Token-Management ersetzen
-  private setUser(user: User): void {
-    this.currentUser.set(user);
-    sessionStorage.setItem('user', JSON.stringify(user));
+  getToken(): string | null {
+    return localStorage.getItem(this.TOKEN_KEY);
   }
 
-  // TODO: Testcode — durch JWT-Token-Validierung ersetzen
-  private loadUser(): User | null {
-    const data = sessionStorage.getItem('user');
-    return data ? JSON.parse(data) : null;
+  private handleAuthSuccess(response: AuthResponse): void {
+    localStorage.setItem(this.TOKEN_KEY, response.token);
+    const user: User = { id: response.id, username: response.username, email: response.email };
+    this.currentUser.set(user);
+  }
+
+  private loadUserFromToken(): User | null {
+    const token = this.getToken();
+    if (!token) return null;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp * 1000 < Date.now()) {
+        localStorage.removeItem(this.TOKEN_KEY);
+        return null;
+      }
+      // Reconstruct a partial user from the token payload on app load.
+      // Email is not in the token, so it will be empty on refresh.
+      return { id: parseInt(payload.sub, 10), username: payload.username, email: '' };
+    } catch (e) {
+      localStorage.removeItem(this.TOKEN_KEY);
+      return null;
+    }
   }
 }

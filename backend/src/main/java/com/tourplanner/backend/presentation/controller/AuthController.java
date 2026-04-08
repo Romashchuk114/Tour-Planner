@@ -1,15 +1,15 @@
 package com.tourplanner.backend.presentation.controller;
 
-import com.tourplanner.backend.business.User;
+import com.tourplanner.backend.model.User;
+import com.tourplanner.backend.presentation.dto.AuthResponseDTO;
 import com.tourplanner.backend.presentation.dto.LoginRequestDTO;
 import com.tourplanner.backend.presentation.dto.RegisterRequestDTO;
+import com.tourplanner.backend.service.JwtService;
 import com.tourplanner.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -17,39 +17,22 @@ import java.util.Map;
 public class AuthController {
 
     private final UserService userService;
+    private final JwtService jwtService;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequestDTO request) {
-        try {
-            User user = userService.register(
-                    request.getUsername(),
-                    request.getEmail(),
-                    request.getPassword()
-            );
-            return ResponseEntity.ok(Map.of(
-                    "id", user.getId(),
-                    "username", user.getUsername(),
-                    "email", user.getEmail()
-            ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+    public ResponseEntity<AuthResponseDTO> register(@Valid @RequestBody RegisterRequestDTO request) {
+        User user = userService.register(request.username(), request.email(), request.password());
+        return ResponseEntity.ok(toResponse(user));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDTO request) {
-        try {
-            User user = userService.login(
-                    request.getUsernameOrEmail(),
-                    request.getPassword()
-            );
-            return ResponseEntity.ok(Map.of(
-                    "id", user.getId(),
-                    "username", user.getUsername(),
-                    "email", user.getEmail()
-            ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+    public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
+        User user = userService.login(request.usernameOrEmail(), request.password());
+        return ResponseEntity.ok(toResponse(user));
+    }
+
+    private AuthResponseDTO toResponse(User user) {
+        String token = jwtService.generateToken(user);
+        return new AuthResponseDTO(user.getId(), user.getUsername(), user.getEmail(), token);
     }
 }
