@@ -1,6 +1,6 @@
 .tours-layout {
   display: grid;
-  height: calc(100vh - 60px); // Assuming a 60px header
+  height: calc(100vh - 60px);
   grid-template-columns: 320px 1fr;
   background-color: #f4f6f9;
   overflow: hidden;
@@ -19,39 +19,24 @@
   @media (max-width: 767px) {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    height: 100%;
 
     .list-pane, .detail-pane {
       width: 100%;
       height: 100%;
       flex: 1;
-    }
+      overflow-y: auto;
+      background-color: #ffffff;
 
-    &.show-detail {
-      .list-pane {
+      position: relative;
+      top: auto;
+      left: auto;
+
+      &[hidden] {
         display: none !important;
       }
-      .detail-pane {
-        display: block !important;
-      }
     }
-
-    &:not(.show-detail) {
-      .detail-pane {
-        display: none !important;
-      }
-      .list-pane {
-        display: block !important;
-      }
-    }
-
-    .mobile-only {
-      display: block;
-    }
-  }
-
-  /* Hide mobile elements by default */
-  .mobile-only {
-    display: none;
   }
 }
 

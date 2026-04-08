@@ -46,7 +46,6 @@ export class ToursList {
 
   onSelectTour(tour: any): void {
     this.tourService.selectTour(tour);
-    // TODO: Trigger loading of tour logs in TourLogService
   }
 
   onNewTourClick(): void {

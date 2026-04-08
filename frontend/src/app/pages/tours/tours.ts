@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, effect } from '@angular/core';
+import { Component, inject, OnInit, effect, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ToursList } from './tour-list/tours-list';
 import { ToursDetail } from './tour-detail/tours-detail';
@@ -14,23 +14,23 @@ import { TourLog, TourLogRequest } from '../../models/tour-log.model';
   standalone: true,
   imports: [CommonModule, ToursList, ToursDetail, TourFormComponent, TourLogFormComponent],
   template: `
-    <div class="tours-layout" [class.show-detail]="showDetail()">
+    <div class="tours-layout">
 
       <!-- List View -->
-      <div class="list-pane">
+      <div class="list-pane" [hidden]="isMobile() && showDetail()">
         <app-tour-list (newTour)="onNewTour()"></app-tour-list>
       </div>
 
       <!-- Detail View -->
-      <div class="detail-pane">
+      <div class="detail-pane" [hidden]="isMobile() && !showDetail()">
 
         <!-- Mobile Back Button -->
-        @if (showDetail()) {
+        @if (isMobile() && showDetail()) {
           <button
             class="back-btn mobile-only"
             (click)="onBackToList()"
           >
-            &larr; Back to Tours
+            &larr; Zurück zu den Touren
           </button>
         }
 
@@ -67,12 +67,16 @@ import { TourLog, TourLogRequest } from '../../models/tour-log.model';
 export class Tours implements OnInit {
   public tourService = inject(TourService);
   public logService = inject(TourLogService);
+  private ngZone = inject(NgZone);
 
   isTourFormOpen = false;
   editingTour: Tour | null = null;
 
   isLogFormOpen = false;
   editingLog: TourLog | null = null;
+
+  private mobileBreakpoint = 767;
+  public screenWidth = window.innerWidth;
 
   constructor() {
     // Listen to changes in the selected tour to fetch logs automatically
@@ -84,10 +88,21 @@ export class Tours implements OnInit {
         this.logService.clearLogs();
       }
     });
+
+    // Resize listener with NgZone so Angular knows the variable changed
+    window.addEventListener('resize', () => {
+      this.ngZone.run(() => {
+        this.screenWidth = window.innerWidth;
+      });
+    });
   }
 
   ngOnInit(): void {
     this.tourService.loadTours();
+  }
+
+  isMobile(): boolean {
+    return this.screenWidth <= this.mobileBreakpoint;
   }
 
   showDetail(): boolean {
