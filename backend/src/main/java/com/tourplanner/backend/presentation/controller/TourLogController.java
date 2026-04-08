@@ -4,8 +4,8 @@ import com.tourplanner.backend.config.AuthenticatedUser;
 import com.tourplanner.backend.model.TourLog;
 import com.tourplanner.backend.presentation.dto.TourLogRequestDTO;
 import com.tourplanner.backend.presentation.dto.TourLogResponseDTO;
+import com.tourplanner.backend.service.TourLogRequestParams;
 import com.tourplanner.backend.service.TourLogService;
-import com.tourplanner.backend.service.TourLogService.TourLogRequestParams;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -62,6 +62,17 @@ public class TourLogController {
     }
 
     private TourLogResponseDTO toResponse(TourLog tourLog) {
-        return new TourLogResponseDTO(tourLog);
+        return new TourLogResponseDTO(
+                tourLog.getId(),
+                tourLog.getTour().getId(),
+                tourLog.getDateTime(),
+                tourLog.getComment(),
+                tourLog.getDifficulty(),
+                tourLog.getTotalDistance(),
+                tourLog.getTotalTime(),
+                tourLog.getRating(),
+                tourLog.getCreatedAt(),
+                tourLog.getUpdatedAt()
+        );
     }
 }

@@ -4,13 +4,12 @@ import com.tourplanner.backend.model.Tour;
 import com.tourplanner.backend.model.TourLog;
 import com.tourplanner.backend.data.TourLogRepository;
 import com.tourplanner.backend.data.TourRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.tourplanner.backend.service.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -70,7 +69,7 @@ public class TourLogService {
 
     private Tour findTourByUser(Long tourId, Long userId) {
         Tour tour = tourRepository.findById(tourId)
-                .orElseThrow(() -> new EntityNotFoundException("Tour nicht gefunden: " + tourId));
+                .orElseThrow(() -> new ResourceNotFoundException("Tour nicht gefunden: " + tourId));
         if (!tour.getUser().getId().equals(userId)) {
             throw new IllegalArgumentException("Kein Zugriff auf diese Tour");
         }
@@ -79,19 +78,10 @@ public class TourLogService {
 
     private TourLog findLog(Long logId, Long tourId) {
         TourLog tourLog = tourLogRepository.findById(logId)
-                .orElseThrow(() -> new EntityNotFoundException("Log nicht gefunden: " + logId));
+                .orElseThrow(() -> new ResourceNotFoundException("Log nicht gefunden: " + logId));
         if (!tourLog.getTour().getId().equals(tourId)) {
             throw new IllegalArgumentException("Log gehört nicht zu Tour " + tourId);
         }
         return tourLog;
     }
-
-    public record TourLogRequestParams(
-            LocalDateTime dateTime,
-            String comment,
-            Integer difficulty,
-            Double totalDistance,
-            Integer totalTime,
-            Integer rating
-    ) {}
 }

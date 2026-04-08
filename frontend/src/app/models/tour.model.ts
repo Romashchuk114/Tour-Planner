@@ -10,7 +10,6 @@ export interface Tour {
   tourDistance: number | null;
   estimatedTime: number | null;
   tourImagePath: string | null;
-  logCount: number;
   createdAt: string;
   updatedAt: string;
 }
