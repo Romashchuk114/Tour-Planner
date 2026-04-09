@@ -79,7 +79,6 @@ export class Tours implements OnInit {
   public screenWidth = window.innerWidth;
 
   constructor() {
-    // Listen to changes in the selected tour to fetch logs automatically
     effect(() => {
       const tourId = this.tourService.selectedTourId();
       if (tourId) {
@@ -89,7 +88,13 @@ export class Tours implements OnInit {
       }
     });
 
-    // Resize listener with NgZone so Angular knows the variable changed
+    effect(() => {
+      const selectedTour = this.tourService.selectedTour();
+      if (this.isTourFormOpen && this.editingTour && selectedTour && this.editingTour.id === selectedTour.id) {
+        this.editingTour = { ...selectedTour };
+      }
+    });
+
     window.addEventListener('resize', () => {
       this.ngZone.run(() => {
         this.screenWidth = window.innerWidth;
@@ -113,15 +118,13 @@ export class Tours implements OnInit {
     this.tourService.selectTour(null);
   }
 
-  // --- TOUR ACTIONS ---
-
   onNewTour(): void {
     this.editingTour = null;
     this.isTourFormOpen = true;
   }
 
   onEditTour(tour: Tour): void {
-    this.editingTour = tour;
+    this.editingTour = { ...tour };
     this.isTourFormOpen = true;
   }
 
@@ -137,8 +140,6 @@ export class Tours implements OnInit {
   onCancelTourForm(): void {
     this.isTourFormOpen = false;
   }
-
-  // --- LOG ACTIONS ---
 
   onCreateLog(): void {
     this.editingLog = null;

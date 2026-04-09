@@ -1,8 +1,9 @@
-import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Tour, TourRequest } from '../../../models/tour.model';
 import { FormFieldComponent } from '../../../components/form-field/form-field.component';
+import { TourService } from '../../../services/tour.service';
 
 @Component({
   selector: 'app-tour-form',
@@ -51,12 +52,18 @@ import { FormFieldComponent } from '../../../components/form-field/form-field.co
             </app-form-field>
           </div>
 
-          <!-- File Upload for Tour Image -->
           <app-form-field label="Tour Bild (Optional)">
             <input type="file" accept="image/*" (change)="onFileSelected($event)">
           </app-form-field>
+
           @if (selectedFileName) {
             <div class="file-name-display">Ausgewähltes Bild: {{ selectedFileName }}</div>
+          }
+          @if (!selectedFileName && isEditMode && tour?.tourImagePath) {
+            <div class="file-name-display" style="display: flex; align-items: center; justify-content: space-between;">
+              <span>Aktuelles Bild: {{ getFileName(tour?.tourImagePath) }}</span>
+              <button type="button" class="btn-delete-image" (click)="onDeleteImage()" style="margin-left: 10px; background-color: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">Bild löschen</button>
+            </div>
           }
 
           <div class="modal-actions">
@@ -74,6 +81,8 @@ export class TourFormComponent implements OnInit {
 
   @Output() saved = new EventEmitter<{ request: TourRequest, imageFile: File | null }>();
   @Output() cancelled = new EventEmitter<void>();
+
+  private tourService = inject(TourService);
 
   tourForm!: FormGroup;
   isEditMode = false;
@@ -96,8 +105,7 @@ export class TourFormComponent implements OnInit {
       transportType: [this.tour?.transportType || '', Validators.required],
       description: [this.tour?.description || ''],
       tourDistance: [this.tour?.tourDistance || null, [Validators.min(0)]],
-      estimatedTime: [this.tour?.estimatedTime || null, [Validators.min(0)]],
-      selectedFileName: [this.tour?.tourImagePath || null]
+      estimatedTime: [this.tour?.estimatedTime || null, [Validators.min(0)]]
     });
   }
 
@@ -120,6 +128,22 @@ export class TourFormComponent implements OnInit {
     } else {
       this.selectedImageFile = null;
       this.selectedFileName = null;
+    }
+  }
+
+  getFileName(path: string | null | undefined): string {
+    if (!path) return '';
+    const segments = path.split(/[/\\]/);
+    const fileName = segments.pop() || path;
+    return fileName.split('?')[0];
+  }
+
+  onDeleteImage(): void {
+    if (this.tour && this.tour.id) {
+      if (confirm('Sind Sie sicher, dass Sie das Bild unwiderruflich löschen möchten?')) {
+        this.tourService.deleteTourImage(this.tour.id);
+        this.tour.tourImagePath = null;
+      }
     }
   }
 

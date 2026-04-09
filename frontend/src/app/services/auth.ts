@@ -45,7 +45,6 @@ export class AuthService {
     this.errorMessage.set('');
     this.http.post<AuthResponse>(`${this.apiUrl}/register`, { username, email, password }).subscribe({
       next: (response) => {
-        // Assuming registration also logs the user in
         this.handleAuthSuccess(response);
         this.router.navigate(['/tours']);
       },
@@ -81,8 +80,7 @@ export class AuthService {
         localStorage.removeItem(this.TOKEN_KEY);
         return null;
       }
-      // Reconstruct a partial user from the token payload on app load.
-      // Email is not in the token, so it will be empty on refresh.
+
       return { id: parseInt(payload.sub, 10), username: payload.username, email: '' };
     } catch (e) {
       localStorage.removeItem(this.TOKEN_KEY);

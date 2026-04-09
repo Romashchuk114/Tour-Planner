@@ -3,9 +3,8 @@ import { CommonModule } from '@angular/common';
 import { TourService } from '../../../services/tour.service';
 import { Tour } from '../../../models/tour.model';
 import { TourLogListComponent } from '../tour-log-list/tour-log-list';
-import { AuthService } from '../../../services/auth';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import {TourLog} from '../../../models/tour-log.model';
 
 @Component({
   selector: 'app-tour-detail',
@@ -23,7 +22,7 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
         </div>
 
         <!-- Tour Image -->
-        @if (tour.id && imageUrl) {
+        @if (tour.tourImagePath && imageUrl) {
           <div class="tour-image-container">
             <img [src]="imageUrl" alt="Tour Bild" class="tour-image">
           </div>
@@ -88,13 +87,11 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 })
 export class ToursDetail {
   @Output() editTour = new EventEmitter<Tour>();
-  @Output() editLog = new EventEmitter<any>();
+  @Output() editLog = new EventEmitter<TourLog>();
   @Output() createLog = new EventEmitter<void>();
   @Output() deleteLog = new EventEmitter<number>();
 
   public tourService = inject(TourService);
-  private authService = inject(AuthService);
-  private http = inject(HttpClient);
   private sanitizer = inject(DomSanitizer);
 
   public imageUrl: SafeUrl | null = null;
@@ -125,27 +122,17 @@ export class ToursDetail {
   }
 
   loadImage(tourId: number): void {
-    // Wenn es ein altes Bild gibt, räume es auf (Memory Leak verhindern)
     if (this.currentImageObjectUrl) {
       URL.revokeObjectURL(this.currentImageObjectUrl);
       this.currentImageObjectUrl = null;
     }
     this.imageUrl = null;
 
-    const token = this.authService.getToken();
-    let headers = new HttpHeaders();
-    if (token) {
-      headers = headers.set('Authorization', `Bearer ${token}`);
-    }
-
-    this.http.get(`http://localhost:8080/api/tours/${tourId}/image`, {
-      headers,
-      responseType: 'blob'
-    }).subscribe({
-      next: (blob) => {
+    this.tourService.getTourImage(tourId).subscribe({
+      next: (blob: Blob) => {
         if (blob && blob.size > 0) {
           this.currentImageObjectUrl = URL.createObjectURL(blob);
-           this.imageUrl = this.sanitizer.bypassSecurityTrustUrl(this.currentImageObjectUrl);
+          this.imageUrl = this.sanitizer.bypassSecurityTrustUrl(this.currentImageObjectUrl);
         } else {
           this.imageUrl = null;
         }
@@ -162,7 +149,7 @@ export class ToursDetail {
       const tour = this.tourService.selectedTour();
       const imagePath = tour?.tourImagePath;
 
-      if (tourId) {
+      if (tourId && imagePath) {
         this.loadImage(tourId);
       } else {
         this.imageUrl = null;
