@@ -1,8 +1,10 @@
-import { Component, EventEmitter, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Output, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TourService } from '../../../services/tour.service';
 import { Tour } from '../../../models/tour.model';
 import { TourLogListComponent } from '../tour-log-list/tour-log-list';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import {TourLog} from '../../../models/tour-log.model';
 
 @Component({
   selector: 'app-tour-detail',
@@ -19,6 +21,13 @@ import { TourLogListComponent } from '../tour-log-list/tour-log-list';
           </div>
         </div>
 
+        <!-- Tour Image -->
+        @if (tour.tourImagePath && imageUrl) {
+          <div class="tour-image-container">
+            <img [src]="imageUrl" alt="Tour Bild" class="tour-image">
+          </div>
+        }
+
         <div class="info-grid">
           <div class="info-item">
             <span class="label">Route:</span>
@@ -26,7 +35,7 @@ import { TourLogListComponent } from '../tour-log-list/tour-log-list';
           </div>
           <div class="info-item">
             <span class="label">Transportart:</span>
-            <span class="value">{{ tour.transportType }}</span>
+            <span class="value">{{ getTransportName(tour.transportType) }}</span>
           </div>
           @if (tour.tourDistance) {
             <div class="info-item">
@@ -62,9 +71,9 @@ import { TourLogListComponent } from '../tour-log-list/tour-log-list';
         <div class="logs-section">
           <h3>Tour Logs</h3>
           <app-tour-log-list
-            (editLog)="onEditLog.emit($event)"
-            (createLog)="onCreateLog.emit()"
-            (deleteLogEmit)="onDeleteLog.emit($event)"
+            (editLog)="editLog.emit($event)"
+            (createLog)="createLog.emit()"
+            (deleteLogEmit)="deleteLog.emit($event)"
           ></app-tour-log-list>
         </div>
       </div>
@@ -78,11 +87,15 @@ import { TourLogListComponent } from '../tour-log-list/tour-log-list';
 })
 export class ToursDetail {
   @Output() editTour = new EventEmitter<Tour>();
-  @Output() editLog = new EventEmitter<any>();
+  @Output() editLog = new EventEmitter<TourLog>();
   @Output() createLog = new EventEmitter<void>();
   @Output() deleteLog = new EventEmitter<number>();
 
   public tourService = inject(TourService);
+  private sanitizer = inject(DomSanitizer);
+
+  public imageUrl: SafeUrl | null = null;
+  private currentImageObjectUrl: string | null = null;
 
   onEditClick(tour: Tour): void {
     this.editTour.emit(tour);
@@ -91,19 +104,56 @@ export class ToursDetail {
   onDelete(): void {
     const tourId = this.tourService.selectedTourId();
     if (tourId) {
-      if (confirm('Are you sure you want to delete this tour?')) {
+      if (confirm('Sind Sie sicher, dass Sie diese Tour löschen möchten?')) {
         this.tourService.deleteTour(tourId);
       }
     }
   }
 
-  onEditLog = new EventEmitter<any>();
-  onCreateLog = new EventEmitter<void>();
-  onDeleteLog = new EventEmitter<number>();
+  getTransportName(type: string): string {
+    switch (type) {
+      case 'WALK': return 'Zu fuß';
+      case 'CAR': return 'Auto';
+      case 'PUBLIC_TRANSPORT': return 'Öffentlicher Verkehr';
+      case 'BIKE': return 'Fahrrad';
+      case 'RUNNING': return 'Laufen';
+      default: return type;
+    }
+  }
+
+  loadImage(tourId: number): void {
+    if (this.currentImageObjectUrl) {
+      URL.revokeObjectURL(this.currentImageObjectUrl);
+      this.currentImageObjectUrl = null;
+    }
+    this.imageUrl = null;
+
+    this.tourService.getTourImage(tourId).subscribe({
+      next: (blob: Blob) => {
+        if (blob && blob.size > 0) {
+          this.currentImageObjectUrl = URL.createObjectURL(blob);
+          this.imageUrl = this.sanitizer.bypassSecurityTrustUrl(this.currentImageObjectUrl);
+        } else {
+          this.imageUrl = null;
+        }
+      },
+      error: () => {
+         this.imageUrl = null;
+      }
+    });
+  }
 
   constructor() {
-    this.onEditLog.subscribe((log) => this.editLog.emit(log));
-    this.onCreateLog.subscribe(() => this.createLog.emit());
-    this.onDeleteLog.subscribe((id) => this.deleteLog.emit(id));
+    effect(() => {
+      const tourId = this.tourService.selectedTourId();
+      const tour = this.tourService.selectedTour();
+      const imagePath = tour?.tourImagePath;
+
+      if (tourId && imagePath) {
+        this.loadImage(tourId);
+      } else {
+        this.imageUrl = null;
+      }
+    });
   }
 }

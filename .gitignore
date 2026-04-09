@@ -15,5 +15,6 @@ frontend/.angular/
 *.log
 .DS_Store
 
-# Konfiguration separat halten (Anforderung!)
+data/
+
 backend/src/main/resources/application-local.properties

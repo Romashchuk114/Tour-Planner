@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TourService } from '../../../services/tour.service';
+import {Tour} from '../../../models/tour.model';
 
 @Component({
   selector: 'app-tour-list',
@@ -44,7 +45,7 @@ export class ToursList {
 
   public tourService = inject(TourService);
 
-  onSelectTour(tour: any): void {
+  onSelectTour(tour: Tour): void {
     this.tourService.selectTour(tour);
   }
 
