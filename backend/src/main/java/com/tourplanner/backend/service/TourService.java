@@ -98,6 +98,19 @@ public class TourService {
     }
 
     @Transactional
+    public Tour deleteImage(Long id, Long userId) {
+        Tour tour = findTourByUser(id, userId);
+        if (tour.getTourImagePath() == null) {
+            throw new ResourceNotFoundException("Kein Bild vorhanden für Tour: " + id);
+        }
+        imageService.delete(tour.getTourImagePath());
+        tour.setTourImagePath(null);
+        Tour saved = tourRepository.save(tour);
+        log.info("Tour image deleted: id={}, userId={}", id, userId);
+        return saved;
+    }
+
+    @Transactional
     public void delete(Long id, Long userId) {
         Tour tour = findTourByUser(id, userId);
         imageService.delete(tour.getTourImagePath());

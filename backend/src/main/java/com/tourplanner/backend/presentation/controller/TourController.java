@@ -76,6 +76,13 @@ public class TourController {
                 .body(resource);
     }
 
+    @DeleteMapping("/{id}/image")
+    public ResponseEntity<TourResponseDTO> deleteImage(@PathVariable Long id,
+                                                        @AuthenticationPrincipal AuthenticatedUser user) {
+        Tour tour = tourService.deleteImage(id, user.id());
+        return ResponseEntity.ok(toResponse(tour));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id,
                                         @AuthenticationPrincipal AuthenticatedUser user) {
