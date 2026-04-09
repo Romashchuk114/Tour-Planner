@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { TourLog, TourLogRequest } from '../models/tour-log.model';
 import { AuthService } from './auth';
 
@@ -22,15 +22,6 @@ export class TourLogService {
   public hasLogs = computed(() => this.logsSignal().length > 0);
   public logCount = computed(() => this.logsSignal().length);
 
-  private getHeaders(): HttpHeaders {
-    const token = this.authService.getToken();
-    let headers = new HttpHeaders();
-    if (token) {
-      headers = headers.set('Authorization', `Bearer ${token}`);
-    }
-    return headers;
-  }
-
   private handleError(err: HttpErrorResponse, defaultMsg: string): void {
     if (err.status === 403 || err.status === 401) {
       this.authService.logout();
@@ -44,12 +35,12 @@ export class TourLogService {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    this.http.get<TourLog[]>(`${this.apiUrl}/${tourId}/logs`, { headers: this.getHeaders() }).subscribe({
+    this.http.get<TourLog[]>(`${this.apiUrl}/${tourId}/logs`).subscribe({
       next: (logs) => {
         this.logsSignal.set(logs);
         this.isLoading.set(false);
       },
-      error: (err) => this.handleError(err, 'Failed to load logs.')
+      error: (err) => this.handleError(err, 'Fehler beim Laden der Logs.')
     });
   }
 
@@ -61,12 +52,12 @@ export class TourLogService {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    this.http.post<TourLog>(`${this.apiUrl}/${tourId}/logs`, req, { headers: this.getHeaders() }).subscribe({
+    this.http.post<TourLog>(`${this.apiUrl}/${tourId}/logs`, req).subscribe({
       next: (newLog) => {
         this.logsSignal.update(logs => [newLog, ...logs]);
         this.isLoading.set(false);
       },
-      error: (err) => this.handleError(err, 'Failed to create log.')
+      error: (err) => this.handleError(err, 'Fehler beim Erstellen des Logs.')
     });
   }
 
@@ -74,14 +65,14 @@ export class TourLogService {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    this.http.put<TourLog>(`${this.apiUrl}/${tourId}/logs/${logId}`, req, { headers: this.getHeaders() }).subscribe({
+    this.http.put<TourLog>(`${this.apiUrl}/${tourId}/logs/${logId}`, req).subscribe({
       next: (updatedLog) => {
         this.logsSignal.update(logs =>
           logs.map(l => l.id === logId ? updatedLog : l)
         );
         this.isLoading.set(false);
       },
-      error: (err) => this.handleError(err, 'Failed to update log.')
+      error: (err) => this.handleError(err, 'Fehler beim Aktualisieren des Logs.')
     });
   }
 
@@ -89,12 +80,12 @@ export class TourLogService {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    this.http.delete(`${this.apiUrl}/${tourId}/logs/${logId}`, { headers: this.getHeaders() }).subscribe({
+    this.http.delete(`${this.apiUrl}/${tourId}/logs/${logId}`).subscribe({
       next: () => {
         this.logsSignal.update(logs => logs.filter(l => l.id !== logId));
         this.isLoading.set(false);
       },
-      error: (err) => this.handleError(err, 'Failed to delete log.')
+      error: (err) => this.handleError(err, 'Fehler beim Löschen des Logs.')
     });
   }
 }

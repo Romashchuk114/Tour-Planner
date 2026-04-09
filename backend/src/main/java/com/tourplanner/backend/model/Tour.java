@@ -1,6 +1,5 @@
 package com.tourplanner.backend.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,7 +22,6 @@ public class Tour {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -61,7 +59,6 @@ public class Tour {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @JsonIgnore
     @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TourLog> logs = new ArrayList<>();
 }

@@ -1,8 +1,9 @@
-import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Tour, TourRequest } from '../../../models/tour.model';
 import { FormFieldComponent } from '../../../components/form-field/form-field.component';
+import { TourService } from '../../../services/tour.service';
 
 @Component({
   selector: 'app-tour-form',
@@ -51,6 +52,20 @@ import { FormFieldComponent } from '../../../components/form-field/form-field.co
             </app-form-field>
           </div>
 
+          <app-form-field label="Tour Bild (Optional)">
+            <input type="file" accept="image/*" (change)="onFileSelected($event)">
+          </app-form-field>
+
+          @if (selectedFileName) {
+            <div class="file-name-display">Ausgewähltes Bild: {{ selectedFileName }}</div>
+          }
+          @if (!selectedFileName && isEditMode && tour?.tourImagePath) {
+            <div class="file-name-display" style="display: flex; align-items: center; justify-content: space-between;">
+              <span>Aktuelles Bild: {{ getFileName(tour?.tourImagePath) }}</span>
+              <button type="button" class="btn-delete-image" (click)="onDeleteImage()" style="margin-left: 10px; background-color: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">Bild löschen</button>
+            </div>
+          }
+
           <div class="modal-actions">
             <button type="button" class="btn-cancel" (click)="onCancel()">Abbruch</button>
             <button type="submit" class="btn-submit" [disabled]="tourForm.invalid">Speichern</button>
@@ -63,11 +78,17 @@ import { FormFieldComponent } from '../../../components/form-field/form-field.co
 })
 export class TourFormComponent implements OnInit {
   @Input() tour: Tour | null = null;
-  @Output() saved = new EventEmitter<TourRequest>();
+
+  @Output() saved = new EventEmitter<{ request: TourRequest, imageFile: File | null }>();
   @Output() cancelled = new EventEmitter<void>();
+
+  private tourService = inject(TourService);
 
   tourForm!: FormGroup;
   isEditMode = false;
+
+  selectedImageFile: File | null = null;
+  selectedFileName: string | null = null;
 
   constructor(private fb: FormBuilder) {}
 
@@ -92,16 +113,46 @@ export class TourFormComponent implements OnInit {
     const control = this.tourForm.get(controlName);
     if (!control || !control.errors || !control.touched) return null;
 
-    if (control.errors['required']) return 'This field is required';
-    if (control.errors['minlength']) return `Minimum length is ${control.errors['minlength'].requiredLength} characters`;
-    if (control.errors['min']) return 'Value must be positive';
+    if (control.errors['required']) return 'Dieses Feld ist erforderlich';
+    if (control.errors['minlength']) return `Die Mindestlänge beträgt ${control.errors['minlength'].requiredLength} Zeichen`;
+    if (control.errors['min']) return 'Wert muss positiv sein';
 
-    return 'Invalid field';
+    return 'Ungültige Eingabe';
+  }
+
+  onFileSelected(event: any): void {
+    const file: File = event.target.files[0];
+    if (file) {
+      this.selectedImageFile = file;
+      this.selectedFileName = file.name;
+    } else {
+      this.selectedImageFile = null;
+      this.selectedFileName = null;
+    }
+  }
+
+  getFileName(path: string | null | undefined): string {
+    if (!path) return '';
+    const segments = path.split(/[/\\]/);
+    const fileName = segments.pop() || path;
+    return fileName.split('?')[0];
+  }
+
+  onDeleteImage(): void {
+    if (this.tour && this.tour.id) {
+      if (confirm('Sind Sie sicher, dass Sie das Bild unwiderruflich löschen möchten?')) {
+        this.tourService.deleteTourImage(this.tour.id);
+        this.tour.tourImagePath = null;
+      }
+    }
   }
 
   onSubmit(): void {
     if (this.tourForm.valid) {
-      this.saved.emit(this.tourForm.value as TourRequest);
+      this.saved.emit({
+        request: this.tourForm.value as TourRequest,
+        imageFile: this.selectedImageFile
+      });
     } else {
       Object.values(this.tourForm.controls).forEach(control => {
         control.markAsTouched();

@@ -4,15 +4,20 @@ import com.tourplanner.backend.config.AuthenticatedUser;
 import com.tourplanner.backend.model.Tour;
 import com.tourplanner.backend.presentation.dto.TourRequestDTO;
 import com.tourplanner.backend.presentation.dto.TourResponseDTO;
+import com.tourplanner.backend.service.TourRequestParams;
 import com.tourplanner.backend.service.TourService;
-import com.tourplanner.backend.service.TourService.TourRequestParams;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -50,6 +55,34 @@ public class TourController {
         return ResponseEntity.ok(toResponse(tour));
     }
 
+    @PostMapping("/{id}/image")
+    public ResponseEntity<TourResponseDTO> uploadImage(@PathVariable Long id,
+                                                        @AuthenticationPrincipal AuthenticatedUser user,
+                                                        @RequestParam("file") MultipartFile file) throws IOException {
+        Tour tour = tourService.uploadImage(id, user.id(), file.getBytes(), file.getOriginalFilename());
+        return ResponseEntity.ok(toResponse(tour));
+    }
+
+    @GetMapping("/{id}/image")
+    public ResponseEntity<Resource> getImage(@PathVariable Long id,
+                                              @AuthenticationPrincipal AuthenticatedUser user) {
+        String imagePath = tourService.getImagePath(id, user.id());
+        if (imagePath == null) {
+            return ResponseEntity.notFound().build();
+        }
+        Resource resource = tourService.loadImage(id, user.id());
+        return ResponseEntity.ok()
+                .contentType(MediaTypeFactory.getMediaType(imagePath).orElse(MediaType.APPLICATION_OCTET_STREAM))
+                .body(resource);
+    }
+
+    @DeleteMapping("/{id}/image")
+    public ResponseEntity<TourResponseDTO> deleteImage(@PathVariable Long id,
+                                                        @AuthenticationPrincipal AuthenticatedUser user) {
+        Tour tour = tourService.deleteImage(id, user.id());
+        return ResponseEntity.ok(toResponse(tour));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id,
                                         @AuthenticationPrincipal AuthenticatedUser user) {
@@ -65,6 +98,19 @@ public class TourController {
     }
 
     private TourResponseDTO toResponse(Tour tour) {
-        return new TourResponseDTO(tour, tour.getLogs().size());
+        return new TourResponseDTO(
+                tour.getId(),
+                tour.getUser().getId(),
+                tour.getName(),
+                tour.getDescription(),
+                tour.getFromLocation(),
+                tour.getToLocation(),
+                tour.getTransportType().name(),
+                tour.getTourDistance(),
+                tour.getEstimatedTime(),
+                tour.getTourImagePath(),
+                tour.getCreatedAt(),
+                tour.getUpdatedAt()
+        );
     }
 }

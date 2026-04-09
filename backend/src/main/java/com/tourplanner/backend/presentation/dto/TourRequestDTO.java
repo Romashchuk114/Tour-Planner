@@ -1,6 +1,7 @@
 package com.tourplanner.backend.presentation.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 
 public record TourRequestDTO(
         @NotBlank String name,
@@ -8,6 +9,6 @@ public record TourRequestDTO(
         @NotBlank String fromLocation,
         @NotBlank String toLocation,
         @NotBlank String transportType,
-        Double tourDistance,
-        Integer estimatedTime
+        @Positive Double tourDistance,
+        @Positive Integer estimatedTime
 ) {}
