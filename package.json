@@ -1,0 +1,15 @@
+{
+  "name": "tour-planner-root",
+  "version": "1.0.0",
+  "description": "Root package for Tour-Planner project",
+  "scripts": {
+    "start": "npm run start:db && npm run start:backend && npm run start:frontend",
+    "start:frontend": "npm start --prefix frontend",
+    "start:backend": "cd backend && mvnw.cmd spring-boot:run",
+    "start:db": "docker compose down -v && docker compose up -d",
+    "install:frontend": "npm install --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend"
+  },
+  "private": true
+}
+
