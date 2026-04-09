@@ -6,13 +6,7 @@ Webbasierte Anwendung zur Planung und Verwaltung von Touren inkl. Tour-Logs.
 
 ## Setup & Starten
 
-### 1. Datenbank starten
-
-```bash
-npm run start:db
-```
-
-### 2. Umgebungsvariablen
+### 1. Umgebungsvariablen
 
 Eine `.env`-Datei im Root-Verzeichnis anlegen:
 
@@ -27,6 +21,7 @@ JWT_EXPIRATION_MS=<expiration-in-ms>
 
 IMAGE_DIR=<pfad-zu-bildern>
 ```
+
 In IntelliJ muss diese `.env`-Datei in der Run Configuration eingebunden werden:
 
 1. **Run > Edit Configurations...** öffnen
@@ -38,15 +33,29 @@ In IntelliJ muss diese `.env`-Datei in der Run Configuration eingebunden werden:
 
 > **Hinweis:** Die `.env`-Datei ist in `.gitignore` eingetragen und wird nicht committed.
 
-### 3. Backend starten
+### 2. Datenbank starten
+
+```bash
+npm run start:db
+```
+
+### 3. Datenbank mit Testdaten befüllen (optional)
+
+```bash
+npm run seed
+```
+
+Erstellt einen Testuser (`testuser` / `password123`) mit 5 Touren und 10 Tour-Logs.
+
+### 4. Backend starten
 
 In IntelliJ die `BackendApplication`-Klasse öffnen und über den grünen **Run**-Button starten (oder **Shift + F10**).
 
-> Voraussetzung: Die `.env`-Datei muss wie in Schritt 2 beschrieben in der Run Configuration eingebunden sein.
+> Voraussetzung: Die `.env`-Datei muss wie in Schritt 1 beschrieben in der Run Configuration eingebunden sein.
 
 Das Backend läuft auf `http://localhost:8080`.
 
-### 4. Frontend starten
+### 5. Frontend starten
 
 ```bash
 npm run start:frontend

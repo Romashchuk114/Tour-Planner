@@ -7,6 +7,7 @@
     "start:frontend": "npm start --prefix frontend",
     "start:backend": "cd backend && mvnw.cmd spring-boot:run",
     "start:db": "docker compose down -v && docker compose up -d",
+    "seed": "docker exec -i tourplanner-db sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB' < seed.sql",
     "install:frontend": "npm install --prefix frontend",
     "build:frontend": "npm run build --prefix frontend"
   },
