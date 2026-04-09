@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.core.io.Resource;
+
 import java.util.List;
 
 @Slf4j
@@ -20,6 +22,7 @@ public class TourService {
 
     private final TourRepository tourRepository;
     private final UserRepository userRepository;
+    private final ImageService imageService;
 
     @Transactional
     public Tour create(Long userId, TourRequestParams params) {
@@ -71,8 +74,33 @@ public class TourService {
     }
 
     @Transactional
+    public Tour uploadImage(Long id, Long userId, byte[] imageData, String originalFilename) {
+        Tour tour = findTourByUser(id, userId);
+        imageService.delete(tour.getTourImagePath());
+        String filename = imageService.save(id, imageData, originalFilename);
+        tour.setTourImagePath(filename);
+        Tour saved = tourRepository.save(tour);
+        log.info("Tour image uploaded: id={}, file={}", id, filename);
+        return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public Resource loadImage(Long id, Long userId) {
+        Tour tour = findTourByUser(id, userId);
+        if (tour.getTourImagePath() == null) {
+            return null;
+        }
+        return imageService.load(tour.getTourImagePath());
+    }
+
+    public String getImagePath(Long id, Long userId) {
+        return findTourByUser(id, userId).getTourImagePath();
+    }
+
+    @Transactional
     public void delete(Long id, Long userId) {
         Tour tour = findTourByUser(id, userId);
+        imageService.delete(tour.getTourImagePath());
         tourRepository.delete(tour);
         log.info("Tour deleted: id={}, userId={}", id, userId);
     }

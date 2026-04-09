@@ -3,6 +3,7 @@ package com.tourplanner.backend.service;
 import com.tourplanner.backend.model.User;
 import com.tourplanner.backend.config.AuthenticatedUser;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,7 +43,7 @@ public class JwtService {
         try {
             extractClaims(token);
             return true;
-        } catch (Exception e) {
+        } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
     }

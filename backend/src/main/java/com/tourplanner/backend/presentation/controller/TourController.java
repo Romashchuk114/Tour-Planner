@@ -8,11 +8,16 @@ import com.tourplanner.backend.service.TourRequestParams;
 import com.tourplanner.backend.service.TourService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -48,6 +53,27 @@ public class TourController {
                                                    @Valid @RequestBody TourRequestDTO request) {
         Tour tour = tourService.update(id, user.id(), toParams(request));
         return ResponseEntity.ok(toResponse(tour));
+    }
+
+    @PostMapping("/{id}/image")
+    public ResponseEntity<TourResponseDTO> uploadImage(@PathVariable Long id,
+                                                        @AuthenticationPrincipal AuthenticatedUser user,
+                                                        @RequestParam("file") MultipartFile file) throws IOException {
+        Tour tour = tourService.uploadImage(id, user.id(), file.getBytes(), file.getOriginalFilename());
+        return ResponseEntity.ok(toResponse(tour));
+    }
+
+    @GetMapping("/{id}/image")
+    public ResponseEntity<Resource> getImage(@PathVariable Long id,
+                                              @AuthenticationPrincipal AuthenticatedUser user) {
+        String imagePath = tourService.getImagePath(id, user.id());
+        if (imagePath == null) {
+            return ResponseEntity.notFound().build();
+        }
+        Resource resource = tourService.loadImage(id, user.id());
+        return ResponseEntity.ok()
+                .contentType(MediaTypeFactory.getMediaType(imagePath).orElse(MediaType.APPLICATION_OCTET_STREAM))
+                .body(resource);
     }
 
     @DeleteMapping("/{id}")
