@@ -46,6 +46,20 @@
   }
 }
 
+@media (max-width: 767px) {
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+
+    .actions {
+      width: 100%;
+      justify-content: flex-start;
+      margin-top: 0.5rem;
+    }
+  }
+}
+
 .tour-image-container {
   margin-bottom: 2rem;
   border-radius: 8px;

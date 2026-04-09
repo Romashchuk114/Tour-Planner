@@ -20,7 +20,13 @@ export class TourService {
   public errorMessage = signal<string>('');
 
   // Computed Values
-  public tours = computed(() => this.toursSignal());
+  public tours = computed(() => {
+    // Sort tours by ID descending (newest first) instead of createdAt to avoid changes during updates
+    const currentTours = this.toursSignal();
+    return [...currentTours].sort((a, b) => {
+      return b.id - a.id;
+    });
+  });
   public selectedTour = computed(() => this.selectedTourSignal());
   public hasTours = computed(() => this.toursSignal().length > 0);
   public selectedTourId = computed(() => this.selectedTourSignal()?.id ?? null);
