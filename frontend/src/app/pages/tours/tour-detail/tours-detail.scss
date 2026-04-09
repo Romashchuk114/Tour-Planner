@@ -46,6 +46,24 @@
   }
 }
 
+.tour-image-container {
+  margin-bottom: 2rem;
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 400px;
+  background-color: #f8f9fa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .tour-image {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    max-height: 400px;
+  }
+}
+
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

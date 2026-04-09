@@ -69,15 +69,27 @@ export class TourLogFormComponent implements OnInit {
   }
 
   private initForm(): void {
-    // Format date string to match datetime-local input requirements if editing
     let initialDate;
     if (this.log?.dateTime) {
-      // Typically need "YYYY-MM-DDThh:mm" format for input type="datetime-local"
       const dateObj = new Date(this.log.dateTime);
-      initialDate = dateObj.toISOString().slice(0, 16);
+
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+
+      initialDate = `${year}-${month}-${day}T${hours}:${minutes}`;
     } else {
-      // Default to now
-      initialDate = new Date().toISOString().slice(0, 16);
+      // Default to now (in local system timezone)
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+
+      initialDate = `${year}-${month}-${day}T${hours}:${minutes}`;
     }
 
     this.logForm = this.fb.group({
@@ -94,21 +106,20 @@ export class TourLogFormComponent implements OnInit {
     const control = this.logForm.get(controlName);
     if (!control || !control.errors || !control.touched) return null;
 
-    if (control.errors['required']) return 'This field is required';
-    if (control.errors['min']) return `Minimum value is ${control.errors['min'].min}`;
-    if (control.errors['max']) return `Maximum value is ${control.errors['max'].max}`;
+    if (control.errors['required']) return 'Dieses Feld ist erforderlich';
+    if (control.errors['min']) return `Mindestwert ist ${control.errors['min'].min}`;
+    if (control.errors['max']) return `Maximalwert ist ${control.errors['max'].max}`;
 
-    return 'Invalid field';
+    return 'Ungültige Eingabe';
   }
 
   onSubmit(): void {
     if (this.logForm.valid) {
-      // Convert datetime-local string to ISO string before sending (or let backend handle string)
       const formValue = { ...this.logForm.value };
 
-      // Ensure time string conforms to ISO or backend expectations
-      if (formValue.dateTime && formValue.dateTime.length === 16) {
-         formValue.dateTime = formValue.dateTime + ':00'; // Append seconds if needed
+      if (formValue.dateTime) {
+         const localDate = new Date(formValue.dateTime);
+         formValue.dateTime = localDate.toISOString();
       }
 
       this.saved.emit(formValue as TourLogRequest);

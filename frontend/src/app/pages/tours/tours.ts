@@ -125,11 +125,11 @@ export class Tours implements OnInit {
     this.isTourFormOpen = true;
   }
 
-  onSaveTour(request: TourRequest): void {
+  onSaveTour(event: { request: TourRequest, imageFile: File | null }): void {
     if (this.editingTour) {
-      this.tourService.updateTour(this.editingTour.id, request);
+      this.tourService.updateTour(this.editingTour.id, event.request, event.imageFile);
     } else {
-      this.tourService.createTour(request);
+      this.tourService.createTour(event.request, event.imageFile);
     }
     this.isTourFormOpen = false;
   }

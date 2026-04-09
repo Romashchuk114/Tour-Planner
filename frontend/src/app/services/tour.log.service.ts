@@ -49,7 +49,7 @@ export class TourLogService {
         this.logsSignal.set(logs);
         this.isLoading.set(false);
       },
-      error: (err) => this.handleError(err, 'Failed to load logs.')
+      error: (err) => this.handleError(err, 'Fehler beim Laden der Logs.')
     });
   }
 
@@ -66,7 +66,7 @@ export class TourLogService {
         this.logsSignal.update(logs => [newLog, ...logs]);
         this.isLoading.set(false);
       },
-      error: (err) => this.handleError(err, 'Failed to create log.')
+      error: (err) => this.handleError(err, 'Fehler beim Erstellen des Logs.')
     });
   }
 
@@ -81,7 +81,7 @@ export class TourLogService {
         );
         this.isLoading.set(false);
       },
-      error: (err) => this.handleError(err, 'Failed to update log.')
+      error: (err) => this.handleError(err, 'Fehler beim Aktualisieren des Logs.')
     });
   }
 
@@ -94,7 +94,7 @@ export class TourLogService {
         this.logsSignal.update(logs => logs.filter(l => l.id !== logId));
         this.isLoading.set(false);
       },
-      error: (err) => this.handleError(err, 'Failed to delete log.')
+      error: (err) => this.handleError(err, 'Fehler beim Löschen des Logs.')
     });
   }
 }

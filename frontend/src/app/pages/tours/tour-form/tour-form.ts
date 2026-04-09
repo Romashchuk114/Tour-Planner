@@ -51,6 +51,14 @@ import { FormFieldComponent } from '../../../components/form-field/form-field.co
             </app-form-field>
           </div>
 
+          <!-- File Upload for Tour Image -->
+          <app-form-field label="Tour Bild (Optional)">
+            <input type="file" accept="image/*" (change)="onFileSelected($event)">
+          </app-form-field>
+          @if (selectedFileName) {
+            <div class="file-name-display">Ausgewähltes Bild: {{ selectedFileName }}</div>
+          }
+
           <div class="modal-actions">
             <button type="button" class="btn-cancel" (click)="onCancel()">Abbruch</button>
             <button type="submit" class="btn-submit" [disabled]="tourForm.invalid">Speichern</button>
@@ -63,11 +71,15 @@ import { FormFieldComponent } from '../../../components/form-field/form-field.co
 })
 export class TourFormComponent implements OnInit {
   @Input() tour: Tour | null = null;
-  @Output() saved = new EventEmitter<TourRequest>();
+
+  @Output() saved = new EventEmitter<{ request: TourRequest, imageFile: File | null }>();
   @Output() cancelled = new EventEmitter<void>();
 
   tourForm!: FormGroup;
   isEditMode = false;
+
+  selectedImageFile: File | null = null;
+  selectedFileName: string | null = null;
 
   constructor(private fb: FormBuilder) {}
 
@@ -84,7 +96,8 @@ export class TourFormComponent implements OnInit {
       transportType: [this.tour?.transportType || '', Validators.required],
       description: [this.tour?.description || ''],
       tourDistance: [this.tour?.tourDistance || null, [Validators.min(0)]],
-      estimatedTime: [this.tour?.estimatedTime || null, [Validators.min(0)]]
+      estimatedTime: [this.tour?.estimatedTime || null, [Validators.min(0)]],
+      selectedFileName: [this.tour?.tourImagePath || null]
     });
   }
 
@@ -92,16 +105,30 @@ export class TourFormComponent implements OnInit {
     const control = this.tourForm.get(controlName);
     if (!control || !control.errors || !control.touched) return null;
 
-    if (control.errors['required']) return 'This field is required';
-    if (control.errors['minlength']) return `Minimum length is ${control.errors['minlength'].requiredLength} characters`;
-    if (control.errors['min']) return 'Value must be positive';
+    if (control.errors['required']) return 'Dieses Feld ist erforderlich';
+    if (control.errors['minlength']) return `Die Mindestlänge beträgt ${control.errors['minlength'].requiredLength} Zeichen`;
+    if (control.errors['min']) return 'Wert muss positiv sein';
 
-    return 'Invalid field';
+    return 'Ungültige Eingabe';
+  }
+
+  onFileSelected(event: any): void {
+    const file: File = event.target.files[0];
+    if (file) {
+      this.selectedImageFile = file;
+      this.selectedFileName = file.name;
+    } else {
+      this.selectedImageFile = null;
+      this.selectedFileName = null;
+    }
   }
 
   onSubmit(): void {
     if (this.tourForm.valid) {
-      this.saved.emit(this.tourForm.value as TourRequest);
+      this.saved.emit({
+        request: this.tourForm.value as TourRequest,
+        imageFile: this.selectedImageFile
+      });
     } else {
       Object.values(this.tourForm.controls).forEach(control => {
         control.markAsTouched();
