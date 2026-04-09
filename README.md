@@ -58,6 +58,9 @@ Das Backend läuft auf `http://localhost:8080`.
 ### 5. Frontend starten
 
 ```bash
+npm run install:frontend
+```
+```bash
 npm run start:frontend
 ```
 
