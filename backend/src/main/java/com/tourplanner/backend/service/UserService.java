@@ -2,6 +2,7 @@ package com.tourplanner.backend.service;
 
 import com.tourplanner.backend.model.User;
 import com.tourplanner.backend.data.UserRepository;
+import com.tourplanner.backend.service.exception.InvalidCredentialsException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,10 +39,10 @@ public class UserService {
     public User login(String usernameOrEmail, String password) {
         User user = userRepository.findByUsername(usernameOrEmail)
                 .or(() -> userRepository.findByEmail(usernameOrEmail))
-                .orElseThrow(() -> new IllegalArgumentException("Benutzer nicht gefunden"));
+                .orElseThrow(InvalidCredentialsException::new);
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new IllegalArgumentException("Falsches Passwort");
+            throw new InvalidCredentialsException();
         }
 
         log.info("User logged in: id={}, username={}", user.getId(), user.getUsername());

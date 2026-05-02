@@ -4,6 +4,7 @@ import com.tourplanner.backend.model.Tour;
 import com.tourplanner.backend.model.TourLog;
 import com.tourplanner.backend.data.TourLogRepository;
 import com.tourplanner.backend.data.TourRepository;
+import com.tourplanner.backend.service.exception.ForbiddenException;
 import com.tourplanner.backend.service.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -71,7 +72,7 @@ public class TourLogService {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tour nicht gefunden: " + tourId));
         if (!tour.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("Kein Zugriff auf diese Tour");
+            throw new ForbiddenException("Kein Zugriff auf diese Tour");
         }
         return tour;
     }
@@ -80,7 +81,7 @@ public class TourLogService {
         TourLog tourLog = tourLogRepository.findById(logId)
                 .orElseThrow(() -> new ResourceNotFoundException("Log nicht gefunden: " + logId));
         if (!tourLog.getTour().getId().equals(tourId)) {
-            throw new IllegalArgumentException("Log gehört nicht zu Tour " + tourId);
+            throw new ForbiddenException("Log gehört nicht zu Tour " + tourId);
         }
         return tourLog;
     }

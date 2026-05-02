@@ -5,6 +5,7 @@ import com.tourplanner.backend.model.TransportType;
 import com.tourplanner.backend.model.User;
 import com.tourplanner.backend.data.TourRepository;
 import com.tourplanner.backend.data.UserRepository;
+import com.tourplanner.backend.service.exception.ForbiddenException;
 import com.tourplanner.backend.service.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -93,6 +94,7 @@ public class TourService {
         return imageService.load(tour.getTourImagePath());
     }
 
+    @Transactional(readOnly = true)
     public String getImagePath(Long id, Long userId) {
         return findTourByUser(id, userId).getTourImagePath();
     }
@@ -122,7 +124,7 @@ public class TourService {
         Tour tour = tourRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tour nicht gefunden: " + id));
         if (!tour.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("Kein Zugriff auf diese Tour");
+            throw new ForbiddenException("Kein Zugriff auf diese Tour");
         }
         return tour;
     }
