@@ -92,8 +92,10 @@ public class TourController {
 
     private TourRequestParams toParams(TourRequestDTO dto) {
         return new TourRequestParams(
-                dto.name(), dto.description(), dto.fromLocation(), dto.toLocation(),
-                dto.transportType(), dto.tourDistance(), dto.estimatedTime()
+                dto.name(), dto.description(),
+                dto.fromLocation(), dto.toLocation(),
+                dto.fromLat(), dto.fromLng(), dto.toLat(), dto.toLng(),
+                dto.transportType()
         );
     }
 
@@ -105,10 +107,15 @@ public class TourController {
                 tour.getDescription(),
                 tour.getFromLocation(),
                 tour.getToLocation(),
+                tour.getFromLat(),
+                tour.getFromLng(),
+                tour.getToLat(),
+                tour.getToLng(),
                 tour.getTransportType().name(),
                 tour.getTourDistance(),
                 tour.getEstimatedTime(),
                 tour.getTourImagePath(),
+                tour.getRouteGeometry(),
                 tour.getCreatedAt(),
                 tour.getUpdatedAt()
         );

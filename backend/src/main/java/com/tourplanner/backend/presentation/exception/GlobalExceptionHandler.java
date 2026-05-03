@@ -5,6 +5,7 @@ import com.tourplanner.backend.service.exception.ForbiddenException;
 import com.tourplanner.backend.service.exception.ImageStorageException;
 import com.tourplanner.backend.service.exception.InvalidCredentialsException;
 import com.tourplanner.backend.service.exception.ResourceNotFoundException;
+import com.tourplanner.backend.service.exception.RouteServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +49,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleImageStorage(ImageStorageException ex) {
         log.error("Image storage error: {}", ex.getMessage(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "Fehler beim Speichern des Bildes");
+    }
+
+    @ExceptionHandler(RouteServiceException.class)
+    public ResponseEntity<ErrorResponseDTO> handleRouteService(RouteServiceException ex) {
+        log.error("Route service error: {}", ex.getMessage(), ex);
+        return build(HttpStatus.BAD_GATEWAY, "Routing-Service nicht erreichbar: " + ex.getMessage());
     }
 
     @ExceptionHandler(IOException.class)

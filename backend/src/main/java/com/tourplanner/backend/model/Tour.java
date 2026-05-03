@@ -38,6 +38,18 @@ public class Tour {
     @Column(name = "to_location", nullable = false)
     private String toLocation;
 
+    @Column(name = "from_lat", nullable = false)
+    private Double fromLat;
+
+    @Column(name = "from_lng", nullable = false)
+    private Double fromLng;
+
+    @Column(name = "to_lat", nullable = false)
+    private Double toLat;
+
+    @Column(name = "to_lng", nullable = false)
+    private Double toLng;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "transport_type", nullable = false)
     private TransportType transportType;
@@ -50,6 +62,9 @@ public class Tour {
 
     @Column(name = "tour_image_path")
     private String tourImagePath;
+
+    @Column(name = "route_geometry", columnDefinition = "TEXT")
+    private String routeGeometry;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

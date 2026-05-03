@@ -12,10 +12,15 @@ CREATE TABLE IF NOT EXISTS tours (
     description     TEXT,
     from_location   VARCHAR(255) NOT NULL,
     to_location     VARCHAR(255) NOT NULL,
+    from_lat        DOUBLE PRECISION NOT NULL,
+    from_lng        DOUBLE PRECISION NOT NULL,
+    to_lat          DOUBLE PRECISION NOT NULL,
+    to_lng          DOUBLE PRECISION NOT NULL,
     transport_type  VARCHAR(50) NOT NULL,
     tour_distance   DOUBLE PRECISION,
     estimated_time  INTEGER,
     tour_image_path VARCHAR(500),
+    route_geometry  TEXT,
     created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );

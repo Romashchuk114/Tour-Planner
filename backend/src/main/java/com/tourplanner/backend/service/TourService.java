@@ -7,6 +7,7 @@ import com.tourplanner.backend.data.TourRepository;
 import com.tourplanner.backend.data.UserRepository;
 import com.tourplanner.backend.service.exception.ForbiddenException;
 import com.tourplanner.backend.service.exception.ResourceNotFoundException;
+import com.tourplanner.backend.service.openrouteservice.RouteInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class TourService {
     private final TourRepository tourRepository;
     private final UserRepository userRepository;
     private final ImageService imageService;
+    private final RouteService routeService;
 
     @Transactional
     public Tour create(Long userId, TourRequestParams params) {
@@ -31,15 +33,23 @@ public class TourService {
                 .orElseThrow(() -> new ResourceNotFoundException("User nicht gefunden: " + userId));
         TransportType type = parseTransportType(params.transportType());
 
+        RouteInfo route = routeService.fetchRoute(
+                params.fromLat(), params.fromLng(), params.toLat(), params.toLng(), type);
+
         Tour tour = new Tour();
         tour.setUser(user);
         tour.setName(params.name());
         tour.setDescription(params.description());
         tour.setFromLocation(params.fromLocation());
         tour.setToLocation(params.toLocation());
+        tour.setFromLat(params.fromLat());
+        tour.setFromLng(params.fromLng());
+        tour.setToLat(params.toLat());
+        tour.setToLng(params.toLng());
         tour.setTransportType(type);
-        tour.setTourDistance(params.tourDistance());
-        tour.setEstimatedTime(params.estimatedTime());
+        tour.setTourDistance(route.distanceKm());
+        tour.setEstimatedTime(route.durationMinutes());
+        tour.setRouteGeometry(route.geometryGeoJson());
 
         Tour saved = tourRepository.save(tour);
         log.info("Tour created: id={}, name={}, userId={}", saved.getId(), saved.getName(), userId);
@@ -61,16 +71,32 @@ public class TourService {
         Tour tour = findTourByUser(id, userId);
         TransportType type = parseTransportType(params.transportType());
 
+        boolean routeChanged = !tour.getFromLat().equals(params.fromLat())
+                || !tour.getFromLng().equals(params.fromLng())
+                || !tour.getToLat().equals(params.toLat())
+                || !tour.getToLng().equals(params.toLng())
+                || tour.getTransportType() != type;
+
+        if (routeChanged) {
+            RouteInfo route = routeService.fetchRoute(
+                    params.fromLat(), params.fromLng(), params.toLat(), params.toLng(), type);
+            tour.setTourDistance(route.distanceKm());
+            tour.setEstimatedTime(route.durationMinutes());
+            tour.setRouteGeometry(route.geometryGeoJson());
+        }
+
         tour.setName(params.name());
         tour.setDescription(params.description());
         tour.setFromLocation(params.fromLocation());
         tour.setToLocation(params.toLocation());
+        tour.setFromLat(params.fromLat());
+        tour.setFromLng(params.fromLng());
+        tour.setToLat(params.toLat());
+        tour.setToLng(params.toLng());
         tour.setTransportType(type);
-        tour.setTourDistance(params.tourDistance());
-        tour.setEstimatedTime(params.estimatedTime());
 
         Tour saved = tourRepository.save(tour);
-        log.info("Tour updated: id={}, userId={}", saved.getId(), userId);
+        log.info("Tour updated: id={}, userId={}, routeRefetched={}", saved.getId(), userId, routeChanged);
         return saved;
     }
 

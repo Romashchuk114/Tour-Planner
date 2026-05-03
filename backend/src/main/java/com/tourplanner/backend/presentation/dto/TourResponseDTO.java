@@ -9,10 +9,15 @@ public record TourResponseDTO(
         String description,
         String fromLocation,
         String toLocation,
+        Double fromLat,
+        Double fromLng,
+        Double toLat,
+        Double toLng,
         String transportType,
         Double tourDistance,
         Integer estimatedTime,
         String tourImagePath,
+        String routeGeometry,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {}

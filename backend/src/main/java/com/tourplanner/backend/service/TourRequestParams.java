@@ -5,7 +5,9 @@ public record TourRequestParams(
         String description,
         String fromLocation,
         String toLocation,
-        String transportType,
-        Double tourDistance,
-        Integer estimatedTime
+        Double fromLat,
+        Double fromLng,
+        Double toLat,
+        Double toLng,
+        String transportType
 ) {}
