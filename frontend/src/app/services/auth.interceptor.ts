@@ -13,8 +13,13 @@ import { inject } from '@angular/core';
 export class AuthInterceptor implements HttpInterceptor {
 
   private authService = inject(AuthService);
+  private backendUrl = 'http://localhost:8080';
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+    if (!request.url.startsWith(this.backendUrl)) {
+      return next.handle(request);
+    }
+
     const token = this.authService.getToken();
 
     if (token) {

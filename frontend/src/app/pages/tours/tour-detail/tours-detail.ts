@@ -5,11 +5,12 @@ import { Tour } from '../../../models/tour.model';
 import { TourLogListComponent } from '../tour-log-list/tour-log-list';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import {TourLog} from '../../../models/tour-log.model';
+import { RouteMapComponent } from '../../../components/route-map/route-map.component';
 
 @Component({
   selector: 'app-tour-detail',
   standalone: true,
-  imports: [CommonModule, TourLogListComponent],
+  imports: [CommonModule, TourLogListComponent, RouteMapComponent],
   template: `
     @if (tourService.selectedTour(); as tour) {
       <div class="tour-detail-container">
@@ -58,13 +59,18 @@ import {TourLog} from '../../../models/tour-log.model';
           </div>
         }
 
-        <!-- Map Placeholder -->
+        <!-- Route Map -->
         <div class="map-section">
-          <div class="map-placeholder">
-            Map integration coming in final submission
-            <br>
-            <small>Route: {{ tour.fromLocation }} to {{ tour.toLocation }}</small>
-          </div>
+          <h3>Route</h3>
+          <app-route-map
+            [routeGeometry]="tour.routeGeometry"
+            [fromLat]="tour.fromLat"
+            [fromLng]="tour.fromLng"
+            [toLat]="tour.toLat"
+            [toLng]="tour.toLng"
+            [fromLabel]="tour.fromLocation"
+            [toLabel]="tour.toLocation">
+          </app-route-map>
         </div>
 
         <!-- Tour Logs Section -->

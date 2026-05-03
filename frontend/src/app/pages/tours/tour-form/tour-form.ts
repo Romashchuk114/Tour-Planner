@@ -3,12 +3,16 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Tour, TourRequest } from '../../../models/tour.model';
 import { FormFieldComponent } from '../../../components/form-field/form-field.component';
+import {
+  LocationAutocompleteComponent,
+  LocationSuggestion
+} from '../../../components/location-autocomplete/location-autocomplete.component';
 import { TourService } from '../../../services/tour.service';
 
 @Component({
   selector: 'app-tour-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormFieldComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormFieldComponent, LocationAutocompleteComponent],
   template: `
     <div class="modal-overlay" (click)="onCancel()">
       <div class="modal-content" (click)="$event.stopPropagation()">
@@ -20,12 +24,20 @@ import { TourService } from '../../../services/tour.service';
             <input type="text" formControlName="name" placeholder="Tour name">
           </app-form-field>
 
-          <app-form-field label="Von" [errorMessage]="getErrorMessage('fromLocation')">
-            <input type="text" formControlName="fromLocation" placeholder="Start">
+          <app-form-field label="Von" [errorMessage]="fromError">
+            <app-location-autocomplete
+              placeholder="Startort suchen…"
+              [initialValue]="initialFrom"
+              (selectedChange)="onFromSelected($event)">
+            </app-location-autocomplete>
           </app-form-field>
 
-          <app-form-field label="Nach" [errorMessage]="getErrorMessage('toLocation')">
-            <input type="text" formControlName="toLocation" placeholder="Ziel">
+          <app-form-field label="Nach" [errorMessage]="toError">
+            <app-location-autocomplete
+              placeholder="Zielort suchen…"
+              [initialValue]="initialTo"
+              (selectedChange)="onToSelected($event)">
+            </app-location-autocomplete>
           </app-form-field>
 
           <app-form-field label="Transport Typ" [errorMessage]="getErrorMessage('transportType')">
@@ -42,15 +54,7 @@ import { TourService } from '../../../services/tour.service';
             <textarea formControlName="description" rows="3" placeholder="Optionale Beschreibung"></textarea>
           </app-form-field>
 
-          <div class="form-row">
-            <app-form-field label="Distanz (km)" [errorMessage]="getErrorMessage('tourDistance')">
-              <input type="number" step="0.1" min="0" formControlName="tourDistance">
-            </app-form-field>
-
-            <app-form-field label="Dauer (min)" [errorMessage]="getErrorMessage('estimatedTime')">
-              <input type="number" min="0" formControlName="estimatedTime">
-            </app-form-field>
-          </div>
+          <p class="info">Distanz und Dauer werden automatisch über OpenRouteService berechnet.</p>
 
           <app-form-field label="Tour Bild (Optional)">
             <input type="file" accept="image/*" (change)="onFileSelected($event)">
@@ -68,7 +72,7 @@ import { TourService } from '../../../services/tour.service';
 
           <div class="modal-actions">
             <button type="button" class="btn-cancel" (click)="onCancel()">Abbruch</button>
-            <button type="submit" class="btn-submit" [disabled]="tourForm.invalid">Speichern</button>
+            <button type="submit" class="btn-submit" [disabled]="!canSubmit()">Speichern</button>
           </div>
         </form>
       </div>
@@ -90,23 +94,64 @@ export class TourFormComponent implements OnInit {
   selectedImageFile: File | null = null;
   selectedFileName: string | null = null;
 
+  fromLocation: LocationSuggestion | null = null;
+  toLocation: LocationSuggestion | null = null;
+  initialFrom: LocationSuggestion | null = null;
+  initialTo: LocationSuggestion | null = null;
+
+  submitAttempted = false;
+
   constructor(private fb: FormBuilder) {}
 
   ngOnInit(): void {
     this.isEditMode = !!this.tour;
+
+    if (this.tour) {
+      this.initialFrom = {
+        name: this.tour.fromLocation,
+        lat: this.tour.fromLat,
+        lng: this.tour.fromLng
+      };
+      this.initialTo = {
+        name: this.tour.toLocation,
+        lat: this.tour.toLat,
+        lng: this.tour.toLng
+      };
+      this.fromLocation = this.initialFrom;
+      this.toLocation = this.initialTo;
+    }
+
     this.initForm();
   }
 
   private initForm(): void {
     this.tourForm = this.fb.group({
       name: [this.tour?.name || '', [Validators.required, Validators.minLength(3)]],
-      fromLocation: [this.tour?.fromLocation || '', Validators.required],
-      toLocation: [this.tour?.toLocation || '', Validators.required],
       transportType: [this.tour?.transportType || '', Validators.required],
-      description: [this.tour?.description || ''],
-      tourDistance: [this.tour?.tourDistance || null, [Validators.min(0)]],
-      estimatedTime: [this.tour?.estimatedTime || null, [Validators.min(0)]]
+      description: [this.tour?.description || '']
     });
+  }
+
+  onFromSelected(s: LocationSuggestion | null): void {
+    this.fromLocation = s;
+  }
+
+  onToSelected(s: LocationSuggestion | null): void {
+    this.toLocation = s;
+  }
+
+  get fromError(): string | null {
+    if (!this.submitAttempted) return null;
+    return this.fromLocation ? null : 'Bitte einen Startort aus der Liste wählen';
+  }
+
+  get toError(): string | null {
+    if (!this.submitAttempted) return null;
+    return this.toLocation ? null : 'Bitte einen Zielort aus der Liste wählen';
+  }
+
+  canSubmit(): boolean {
+    return this.tourForm.valid && !!this.fromLocation && !!this.toLocation;
   }
 
   getErrorMessage(controlName: string): string | null {
@@ -115,7 +160,6 @@ export class TourFormComponent implements OnInit {
 
     if (control.errors['required']) return 'Dieses Feld ist erforderlich';
     if (control.errors['minlength']) return `Die Mindestlänge beträgt ${control.errors['minlength'].requiredLength} Zeichen`;
-    if (control.errors['min']) return 'Wert muss positiv sein';
 
     return 'Ungültige Eingabe';
   }
@@ -148,16 +192,27 @@ export class TourFormComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (this.tourForm.valid) {
-      this.saved.emit({
-        request: this.tourForm.value as TourRequest,
-        imageFile: this.selectedImageFile
-      });
-    } else {
-      Object.values(this.tourForm.controls).forEach(control => {
-        control.markAsTouched();
-      });
+    this.submitAttempted = true;
+
+    if (!this.canSubmit()) {
+      Object.values(this.tourForm.controls).forEach(c => c.markAsTouched());
+      return;
     }
+
+    const formValue = this.tourForm.value;
+    const request: TourRequest = {
+      name: formValue.name,
+      description: formValue.description,
+      transportType: formValue.transportType,
+      fromLocation: this.fromLocation!.name,
+      toLocation: this.toLocation!.name,
+      fromLat: this.fromLocation!.lat,
+      fromLng: this.fromLocation!.lng,
+      toLat: this.toLocation!.lat,
+      toLng: this.toLocation!.lng
+    };
+
+    this.saved.emit({ request, imageFile: this.selectedImageFile });
   }
 
   onCancel(): void {
