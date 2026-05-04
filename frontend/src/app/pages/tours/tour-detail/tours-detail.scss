@@ -101,6 +101,12 @@
       font-weight: 500;
       color: #212529;
     }
+
+    &.clickable-route .value {
+      color: #007bff; /* Blue color for clickable text */
+      text-decoration: underline;
+      cursor: pointer;
+    }
   }
 }
 

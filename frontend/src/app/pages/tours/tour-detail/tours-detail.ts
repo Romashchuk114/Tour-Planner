@@ -30,9 +30,13 @@ import { RouteMapComponent } from '../../../components/route-map/route-map.compo
         }
 
         <div class="info-grid">
-          <div class="info-item">
+          <div class="info-item clickable-route" (click)="toggleAddressDisplay()" title="Klicken um vollständige/abgekürzte Adresse anzuzeigen">
             <span class="label">Route:</span>
-            <span class="value">{{ tour.fromLocation }} &rarr; {{ tour.toLocation }}</span>
+            <span class="value">
+              {{ showFullAddress ? tour.fromLocation : formatLocation(tour.fromLocation) }}
+              &rarr;
+              {{ showFullAddress ? tour.toLocation : formatLocation(tour.toLocation) }}
+            </span>
           </div>
           <div class="info-item">
             <span class="label">Transportart:</span>
@@ -47,7 +51,7 @@ import { RouteMapComponent } from '../../../components/route-map/route-map.compo
           @if (tour.estimatedTime) {
             <div class="info-item">
               <span class="label">Dauer:</span>
-              <span class="value">{{ tour.estimatedTime }} min</span>
+              <span class="value">{{ formatDuration(tour.estimatedTime) }}</span>
             </div>
           }
         </div>
@@ -103,6 +107,8 @@ export class ToursDetail {
   public imageUrl: SafeUrl | null = null;
   private currentImageObjectUrl: string | null = null;
 
+  public showFullAddress = false;
+
   onEditClick(tour: Tour): void {
     this.editTour.emit(tour);
   }
@@ -116,15 +122,48 @@ export class ToursDetail {
     }
   }
 
+  toggleAddressDisplay(): void {
+    this.showFullAddress = !this.showFullAddress;
+  }
+
   getTransportName(type: string): string {
     switch (type) {
       case 'WALK': return 'Zu fuß';
       case 'CAR': return 'Auto';
-      case 'PUBLIC_TRANSPORT': return 'Öffentlicher Verkehr';
       case 'BIKE': return 'Fahrrad';
       case 'RUNNING': return 'Laufen';
       default: return type;
     }
+  }
+
+  formatLocation(location: string | undefined): string {
+    if (!location) return '';
+    return location.split(',')[0].trim();
+  }
+
+  formatDuration(minutes: number | null | undefined): string {
+    if (minutes === null || minutes === undefined) return '';
+
+    if (minutes < 60) {
+      return `${minutes} min`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+
+    if (hours < 24) {
+      if (remainingMinutes === 0) return `${hours} h`;
+      return `${hours} h ${remainingMinutes} min`;
+    }
+
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+
+    let result = `${days} d`;
+    if (remainingHours > 0) result += ` ${remainingHours} h`;
+    if (remainingMinutes > 0) result += ` ${remainingMinutes} min`;
+
+    return result;
   }
 
   loadImage(tourId: number): void {
@@ -154,6 +193,11 @@ export class ToursDetail {
       const tourId = this.tourService.selectedTourId();
       const tour = this.tourService.selectedTour();
       const imagePath = tour?.tourImagePath;
+
+      // Reset address display when changing tours
+      if (tourId) {
+        this.showFullAddress = false;
+      }
 
       if (tourId && imagePath) {
         this.loadImage(tourId);

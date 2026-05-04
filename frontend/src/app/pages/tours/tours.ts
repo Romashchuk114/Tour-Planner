@@ -57,6 +57,7 @@ import { TourLog, TourLogRequest } from '../../models/tour-log.model';
     @if (isLogFormOpen) {
       <app-tour-log-form
         [log]="editingLog"
+        [maxDistance]="tourService.selectedTour()?.tourDistance"
         (saved)="onSaveLog($event)"
         (cancelled)="onCancelLogForm()"
       ></app-tour-log-form>

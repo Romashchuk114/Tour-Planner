@@ -31,7 +31,7 @@ import {Tour} from '../../../models/tour.model';
               (click)="onSelectTour(tour)"
             >
               <span class="tour-name">{{ tour.name }}</span>
-              <span class="tour-meta">{{ tour.fromLocation }} &rarr; {{ tour.toLocation }}</span>
+              <span class="tour-meta">{{ formatLocation(tour.fromLocation) }} &rarr; {{ formatLocation(tour.toLocation) }}</span>
             </li>
           }
         </ul>
@@ -51,5 +51,10 @@ export class ToursList {
 
   onNewTourClick(): void {
     this.newTour.emit();
+  }
+
+  formatLocation(location: string | undefined): string {
+    if (!location) return '';
+    return location.split(',')[0].trim();
   }
 }

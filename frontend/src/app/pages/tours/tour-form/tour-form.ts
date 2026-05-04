@@ -46,7 +46,6 @@ import { TourService } from '../../../services/tour.service';
               <option value="WALK">Zu Fuß</option>
               <option value="BIKE">Fahrrad</option>
               <option value="CAR">Auto</option>
-              <option value="PUBLIC_TRANSPORT">Öffentliche Verkehrsmittel</option>
             </select>
           </app-form-field>
 
