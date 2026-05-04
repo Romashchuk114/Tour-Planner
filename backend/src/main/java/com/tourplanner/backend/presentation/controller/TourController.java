@@ -2,8 +2,11 @@ package com.tourplanner.backend.presentation.controller;
 
 import com.tourplanner.backend.config.AuthenticatedUser;
 import com.tourplanner.backend.model.Tour;
+import com.tourplanner.backend.model.TourStage;
+import com.tourplanner.backend.presentation.dto.StageResponseDTO;
 import com.tourplanner.backend.presentation.dto.TourRequestDTO;
 import com.tourplanner.backend.presentation.dto.TourResponseDTO;
+import com.tourplanner.backend.service.StageParam;
 import com.tourplanner.backend.service.TourRequestParams;
 import com.tourplanner.backend.service.TourService;
 import jakarta.validation.Valid;
@@ -91,31 +94,45 @@ public class TourController {
     }
 
     private TourRequestParams toParams(TourRequestDTO dto) {
+        List<StageParam> stages = dto.stages().stream()
+                .map(s -> new StageParam(
+                        s.transportType(), s.endName(), s.endLat(), s.endLng()))
+                .toList();
         return new TourRequestParams(
                 dto.name(), dto.description(),
-                dto.fromLocation(), dto.toLocation(),
-                dto.fromLat(), dto.fromLng(), dto.toLat(), dto.toLng(),
-                dto.transportType()
+                dto.fromName(), dto.fromLat(), dto.fromLng(),
+                stages
         );
     }
 
     private TourResponseDTO toResponse(Tour tour) {
+        List<StageResponseDTO> stages = tour.getStages().stream()
+                .map(s -> new StageResponseDTO(
+                        s.getOrderIndex(),
+                        s.getTransportType().name(),
+                        s.getEndName(),
+                        s.getEndLat(),
+                        s.getEndLng(),
+                        s.getDistance(),
+                        s.getDuration(),
+                        s.getGeometryGeoJson()))
+                .toList();
+
+        double totalDistance = tour.getStages().stream().mapToDouble(TourStage::getDistance).sum();
+        int totalDuration = tour.getStages().stream().mapToInt(TourStage::getDuration).sum();
+
         return new TourResponseDTO(
                 tour.getId(),
                 tour.getUser().getId(),
                 tour.getName(),
                 tour.getDescription(),
-                tour.getFromLocation(),
-                tour.getToLocation(),
+                tour.getFromName(),
                 tour.getFromLat(),
                 tour.getFromLng(),
-                tour.getToLat(),
-                tour.getToLng(),
-                tour.getTransportType().name(),
-                tour.getTourDistance(),
-                tour.getEstimatedTime(),
+                Math.round(totalDistance * 100.0) / 100.0,
+                totalDuration,
                 tour.getTourImagePath(),
-                tour.getRouteGeometry(),
+                stages,
                 tour.getCreatedAt(),
                 tour.getUpdatedAt()
         );

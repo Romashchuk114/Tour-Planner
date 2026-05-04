@@ -1,5 +1,8 @@
 package com.tourplanner.backend.service;
 
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.tourplanner.backend.model.TransportType;
 import com.tourplanner.backend.service.exception.RouteServiceException;
 import lombok.extern.slf4j.Slf4j;
@@ -12,18 +15,23 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class RouteService {
 
+    private static final String ORS_HINT_DISTANCE_TOO_LONG = "approximated route distance";
+    private static final String ORS_HINT_NOT_ROUTABLE = "Could not find routable point";
+
     private final RestClient orsClient;
     private final String apiKey;
+    private final ObjectMapper objectMapper;
 
     public RouteService(@Value("${app.openrouteservice.base-url}") String baseUrl,
-                        @Value("${app.openrouteservice.api-key}") String apiKey) {
+                        @Value("${app.openrouteservice.api-key}") String apiKey,
+                        ObjectMapper objectMapper) {
         this.apiKey = apiKey;
+        this.objectMapper = objectMapper;
         this.orsClient = RestClient.builder().baseUrl(baseUrl).build();
     }
 
@@ -56,16 +64,53 @@ public class RouteService {
             RouteInfo info = new RouteInfo(
                     Math.round(meters / 10.0) / 100.0,
                     (int) Math.round(seconds / 60.0),
-                    buildGeometryJson(feature.geometry())
+                    serializeGeometry(feature.geometry())
             );
             log.info("Route geladen: [{},{}] → [{},{}] via {} = {} km, {} min",
                     fromLat, fromLng, toLat, toLng, profile, info.distanceKm(), info.durationMinutes());
             return info;
         } catch (RestClientResponseException e) {
-            log.error("ORS error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RouteServiceException("Routing-Service Fehler (HTTP " + e.getStatusCode() + ")", e);
+            String responseBody = e.getResponseBodyAsString();
+            log.error("ORS error: status={}, body={}", e.getStatusCode(), responseBody);
+            throw new RouteServiceException(buildOrsErrorMessage(responseBody, e.getStatusCode().value()), e);
         } catch (RestClientException e) {
             throw new RouteServiceException("Routing fehlgeschlagen für Profil " + profile, e);
+        }
+    }
+
+    private String buildOrsErrorMessage(String body, int status) {
+        String orsMessage = extractOrsErrorMessage(body);
+        if (orsMessage == null) {
+            return "Routing-Service Fehler (HTTP " + status + ")";
+        }
+        if (orsMessage.contains(ORS_HINT_DISTANCE_TOO_LONG)) {
+            return "Eine Etappe ist zu lang für OpenRouteService "
+                    + "(Limit ca. 6000 km für Auto/Fahrrad, 100 km für Fuß). "
+                    + "Bitte einen Zwischenstopp einfügen, damit die Etappen kürzer werden.";
+        }
+        if (orsMessage.contains(ORS_HINT_NOT_ROUTABLE)) {
+            return "Ein Punkt liegt nicht am Straßen- bzw. Wegenetz. Bitte einen anderen Ort wählen.";
+        }
+        return "Routing fehlgeschlagen: " + orsMessage;
+    }
+
+    private String extractOrsErrorMessage(String body) {
+        if (body == null) return null;
+        try {
+            JsonNode error = objectMapper.readTree(body).path("error");
+            if (error.isString()) return error.asString();
+            return error.path("message").asString(null);
+        } catch (JacksonException e) {
+            log.debug("ORS-Error-Body nicht parsbar als JSON");
+            return null;
+        }
+    }
+
+    private String serializeGeometry(DirectionsResponse.Geometry geom) {
+        try {
+            return objectMapper.writeValueAsString(geom);
+        } catch (JacksonException e) {
+            throw new RouteServiceException("Geometrie-Serialisierung fehlgeschlagen", e);
         }
     }
 
@@ -79,13 +124,6 @@ public class RouteService {
             case CAR -> "driving-car";
             case MOTORHOME -> "driving-hgv";
         };
-    }
-
-    private String buildGeometryJson(DirectionsResponse.Geometry geom) {
-        String coords = geom.coordinates().stream()
-                .map(c -> "[" + c.get(0) + "," + c.get(1) + "]")
-                .collect(Collectors.joining(","));
-        return "{\"type\":\"" + geom.type() + "\",\"coordinates\":[" + coords + "]}";
     }
 
     private record DirectionsResponse(List<Feature> features) {

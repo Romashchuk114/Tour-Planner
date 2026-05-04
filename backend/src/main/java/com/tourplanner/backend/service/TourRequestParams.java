@@ -1,13 +1,12 @@
 package com.tourplanner.backend.service;
 
+import java.util.List;
+
 public record TourRequestParams(
         String name,
         String description,
-        String fromLocation,
-        String toLocation,
+        String fromName,
         Double fromLat,
         Double fromLng,
-        Double toLat,
-        Double toLng,
-        String transportType
+        List<StageParam> stages
 ) {}

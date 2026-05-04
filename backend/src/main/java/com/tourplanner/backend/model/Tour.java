@@ -32,11 +32,8 @@ public class Tour {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "from_location", nullable = false)
-    private String fromLocation;
-
-    @Column(name = "to_location", nullable = false)
-    private String toLocation;
+    @Column(name = "from_name", nullable = false)
+    private String fromName;
 
     @Column(name = "from_lat", nullable = false)
     private Double fromLat;
@@ -44,27 +41,8 @@ public class Tour {
     @Column(name = "from_lng", nullable = false)
     private Double fromLng;
 
-    @Column(name = "to_lat", nullable = false)
-    private Double toLat;
-
-    @Column(name = "to_lng", nullable = false)
-    private Double toLng;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "transport_type", nullable = false)
-    private TransportType transportType;
-
-    @Column(name = "tour_distance")
-    private Double tourDistance;
-
-    @Column(name = "estimated_time")
-    private Integer estimatedTime;
-
     @Column(name = "tour_image_path")
     private String tourImagePath;
-
-    @Column(name = "route_geometry", columnDefinition = "TEXT")
-    private String routeGeometry;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -76,4 +54,8 @@ public class Tour {
 
     @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TourLog> logs = new ArrayList<>();
+
+    @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
+    private List<TourStage> stages = new ArrayList<>();
 }
