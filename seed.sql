@@ -13,7 +13,7 @@ INSERT INTO tours (user_id, name, description, from_location, to_location, from_
   (1, 'Wiener Stadtwanderung',      'Gemütliche Wanderung durch die Wiener Innenstadt mit Besuch der wichtigsten Sehenswürdigkeiten.', 'Wien Stephansplatz',     'Wien Schönbrunn',      48.2086, 16.3725, 48.1846, 16.3120, 'WALK',             8.5,  120),
   (1, 'Donauradweg Etappe 1',       'Erste Etappe des Donauradwegs von Passau nach Linz entlang der Donau.',                          'Passau',                 'Linz',                 48.5748,  13.4609, 48.3064, 14.2858, 'BIKE',             95.0, 360),
   (1, 'Salzburg - Hallstatt',       'Tagesausflug mit dem Auto von Salzburg nach Hallstatt über die Salzkammergut-Straße.',            'Salzburg Hauptbahnhof',  'Hallstatt',            47.8126, 13.0466, 47.5622, 13.6493, 'CAR',              75.3, 65),
-  (1, 'Wiener Öffi-Tour',           'Wien erkunden mit den öffentlichen Verkehrsmitteln.',                                             'Wien Praterstern',       'Wien Zentralfriedhof', 48.2186, 16.3915, 48.1497, 16.4407, 'PUBLIC_TRANSPORT', 12.0, 45),
+  (1, 'Wiener Stadtrundfahrt',      'Wien mit dem Auto erkunden – von Praterstern zum Zentralfriedhof.',                              'Wien Praterstern',       'Wien Zentralfriedhof', 48.2186, 16.3915, 48.1497, 16.4407, 'CAR',              12.0, 45),
   (1, 'Graz Schloßberg Wanderung',  'Aufstieg auf den Grazer Schloßberg mit Panoramablick über die Stadt.',                            'Graz Hauptplatz',        'Graz Schloßberg',      47.0707, 15.4395, 47.0746, 15.4374, 'WALK',             2.5,  40);
 
 -- Tour Logs fuer Tour 1: Wiener Stadtwanderung
@@ -32,9 +32,9 @@ INSERT INTO tour_logs (tour_id, date_time, comment, difficulty, total_distance, 
   (3, '2026-03-20 08:00:00', 'Stau bei der Anfahrt, Hallstatt selbst war überfüllt.',                2, 78.0, 90,  3),
   (3, '2026-04-02 07:00:00', 'Früh losgefahren, kaum Verkehr. Hallstatt im Morgenlicht ist magisch.',1, 75.0, 60,  5);
 
--- Tour Logs fuer Tour 4: Wiener Öffi-Tour
+-- Tour Logs fuer Tour 4: Wiener Stadtrundfahrt
 INSERT INTO tour_logs (tour_id, date_time, comment, difficulty, total_distance, total_time, rating) VALUES
-  (4, '2026-03-28 14:00:00', 'U-Bahn und Straßenbahn funktionieren einwandfrei.',                    1, 12.5, 50,  4);
+  (4, '2026-03-28 14:00:00', 'Wenig Verkehr am Nachmittag, Strecke gut zu fahren.',                  1, 12.5, 50,  4);
 
 -- Tour Logs fuer Tour 5: Graz Schloßberg
 INSERT INTO tour_logs (tour_id, date_time, comment, difficulty, total_distance, total_time, rating) VALUES

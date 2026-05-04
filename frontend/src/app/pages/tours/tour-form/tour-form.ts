@@ -44,8 +44,12 @@ import { TourService } from '../../../services/tour.service';
             <select formControlName="transportType">
               <option value="" disabled>Wähle Transport Typ</option>
               <option value="WALK">Zu Fuß</option>
+              <option value="HIKING">Wandern</option>
               <option value="BIKE">Fahrrad</option>
+              <option value="MOUNTAIN_BIKE">Mountainbike</option>
+              <option value="ROAD_BIKE">Rennrad</option>
               <option value="CAR">Auto</option>
+              <option value="MOTORHOME">Wohnmobil / LKW</option>
             </select>
           </app-form-field>
 

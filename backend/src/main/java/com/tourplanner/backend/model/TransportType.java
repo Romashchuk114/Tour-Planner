@@ -1,5 +1,11 @@
 package com.tourplanner.backend.model;
 
 public enum TransportType {
-    WALK, CAR, BIKE, PUBLIC_TRANSPORT
+    WALK,
+    HIKING,
+    BIKE,
+    MOUNTAIN_BIKE,
+    ROAD_BIKE,
+    CAR,
+    MOTORHOME
 }

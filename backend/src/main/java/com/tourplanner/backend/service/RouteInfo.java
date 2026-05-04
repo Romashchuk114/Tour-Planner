@@ -1,4 +1,4 @@
-package com.tourplanner.backend.service.openrouteservice;
+package com.tourplanner.backend.service;
 
 public record RouteInfo(
         Double distanceKm,

@@ -128,10 +128,13 @@ export class ToursDetail {
 
   getTransportName(type: string): string {
     switch (type) {
-      case 'WALK': return 'Zu fuß';
-      case 'CAR': return 'Auto';
+      case 'WALK': return 'Zu Fuß';
+      case 'HIKING': return 'Wandern';
       case 'BIKE': return 'Fahrrad';
-      case 'RUNNING': return 'Laufen';
+      case 'MOUNTAIN_BIKE': return 'Mountainbike';
+      case 'ROAD_BIKE': return 'Rennrad';
+      case 'CAR': return 'Auto';
+      case 'MOTORHOME': return 'Wohnmobil / LKW';
       default: return type;
     }
   }

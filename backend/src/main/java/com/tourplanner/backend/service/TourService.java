@@ -7,7 +7,6 @@ import com.tourplanner.backend.data.TourRepository;
 import com.tourplanner.backend.data.UserRepository;
 import com.tourplanner.backend.service.exception.ForbiddenException;
 import com.tourplanner.backend.service.exception.ResourceNotFoundException;
-import com.tourplanner.backend.service.openrouteservice.RouteInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
