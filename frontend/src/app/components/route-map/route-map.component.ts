@@ -2,54 +2,62 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
-  Input,
-  OnChanges,
   OnDestroy,
-  SimpleChanges,
   ViewChild,
-  ViewEncapsulation
+  ViewEncapsulation,
+  effect,
+  input
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import * as L from 'leaflet';
+import { SEGMENT_COLORS } from './map-colors';
+
+export interface MapPoint {
+  lat: number;
+  lng: number;
+  label: string;
+  kind: 'start' | 'waypoint' | 'end';
+  index?: number;
+}
+
+export interface MapSegment {
+  geometryGeoJson: string | null;
+  transportType: string;
+}
 
 @Component({
   selector: 'app-route-map',
   standalone: true,
-  imports: [CommonModule],
   encapsulation: ViewEncapsulation.None,
-  template: `
-    <div #mapContainer class="route-map"></div>
-  `,
+  template: `<div #mapContainer class="route-map"></div>`,
   styleUrls: ['./route-map.component.scss']
 })
-export class RouteMapComponent implements AfterViewInit, OnChanges, OnDestroy {
-  @Input() routeGeometry: string | null = null;
-  @Input() fromLat!: number;
-  @Input() fromLng!: number;
-  @Input() toLat!: number;
-  @Input() toLng!: number;
-  @Input() fromLabel = 'Start';
-  @Input() toLabel = 'Ziel';
+export class RouteMapComponent implements AfterViewInit, OnDestroy {
+  points = input<MapPoint[]>([]);
+  segments = input<MapSegment[]>([]);
 
   @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef<HTMLDivElement>;
 
   private map?: L.Map;
-  private routeLayer?: L.GeoJSON;
-  private fromMarker?: L.Marker;
-  private toMarker?: L.Marker;
+  private routeLayers: L.GeoJSON[] = [];
+  private markers: L.Marker[] = [];
   private resizeObserver?: ResizeObserver;
+  private lastRenderKey: string | null = null;
+
+  constructor() {
+    effect(() => {
+      const pts = this.points();
+      const segs = this.segments();
+      if (this.map) {
+        this.render(pts, segs);
+      }
+    });
+  }
 
   ngAfterViewInit(): void {
     requestAnimationFrame(() => {
       this.initMap();
-      this.render();
+      this.render(this.points(), this.segments());
     });
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (this.map) {
-      this.render();
-    }
   }
 
   ngOnDestroy(): void {
@@ -59,77 +67,82 @@ export class RouteMapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   private initMap(): void {
     const el = this.mapContainer.nativeElement;
-
-    this.map = L.map(el, {
-      zoomControl: true,
-      scrollWheelZoom: true
-    }).setView([47.5, 14.5], 7);
+    this.map = L.map(el, { zoomControl: true, scrollWheelZoom: true })
+      .setView([47.5, 14.5], 7);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19
     }).addTo(this.map);
 
-    this.resizeObserver = new ResizeObserver(() => {
-      this.map?.invalidateSize();
-    });
+    this.resizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
     this.resizeObserver.observe(el);
-
     setTimeout(() => this.map?.invalidateSize(), 100);
   }
 
-  private render(): void {
+  private render(points: MapPoint[], segments: MapSegment[]): void {
     if (!this.map) return;
 
-    if (this.routeLayer) { this.map.removeLayer(this.routeLayer); this.routeLayer = undefined; }
-    if (this.fromMarker) { this.map.removeLayer(this.fromMarker); this.fromMarker = undefined; }
-    if (this.toMarker) { this.map.removeLayer(this.toMarker); this.toMarker = undefined; }
+    // Skip if structurally identical to last render (computed-Signals erzeugen neue Array-Identität bei jeder Re-Evaluation)
+    const key = this.computeKey(points, segments);
+    if (key === this.lastRenderKey) return;
+    this.lastRenderKey = key;
 
-    const fromIcon = this.makeIcon('#28a745');
-    const toIcon = this.makeIcon('#dc3545');
+    this.routeLayers.forEach(l => this.map!.removeLayer(l));
+    this.routeLayers = [];
+    this.markers.forEach(m => this.map!.removeLayer(m));
+    this.markers = [];
 
-    this.fromMarker = L.marker([this.fromLat, this.fromLng], { icon: fromIcon })
-      .addTo(this.map)
-      .bindPopup(this.fromLabel);
+    if (!points.length) return;
 
-    this.toMarker = L.marker([this.toLat, this.toLng], { icon: toIcon })
-      .addTo(this.map)
-      .bindPopup(this.toLabel);
+    points.forEach(p => {
+      const marker = L.marker([p.lat, p.lng], { icon: this.makeIcon(p.kind, p.index) })
+        .addTo(this.map!)
+        .bindPopup(p.label);
+      this.markers.push(marker);
+    });
 
-    if (this.routeGeometry) {
+    const bounds = L.latLngBounds([]);
+    points.forEach(p => bounds.extend([p.lat, p.lng]));
+
+    segments.forEach((seg, i) => {
+      if (!seg.geometryGeoJson) return;
       try {
-        const geo = JSON.parse(this.routeGeometry);
-        this.routeLayer = L.geoJSON(geo, {
-          style: { color: '#007bff', weight: 4, opacity: 0.85 }
-        }).addTo(this.map);
-        this.map.fitBounds(this.routeLayer.getBounds(), { padding: [30, 30] });
+        const geo = JSON.parse(seg.geometryGeoJson);
+        const layer = L.geoJSON(geo, {
+          style: { color: SEGMENT_COLORS[i % SEGMENT_COLORS.length], weight: 4, opacity: 0.85 }
+        }).addTo(this.map!);
+        layer.bindPopup(`Etappe ${i + 1}: ${seg.transportType}`);
+        this.routeLayers.push(layer);
+        bounds.extend(layer.getBounds());
       } catch {
-        this.fitBoundsToMarkers();
+        // skip broken geometry
       }
-    } else {
-      this.fitBoundsToMarkers();
+    });
+
+    if (bounds.isValid()) {
+      this.map.fitBounds(bounds, { padding: [40, 40] });
     }
   }
 
-  private fitBoundsToMarkers(): void {
-    if (!this.map) return;
-    const bounds = L.latLngBounds(
-      [this.fromLat, this.fromLng],
-      [this.toLat, this.toLng]
-    );
-    this.map.fitBounds(bounds, { padding: [50, 50] });
+  private computeKey(points: MapPoint[], segments: MapSegment[]): string {
+    const p = points.map(pt => `${pt.kind}:${pt.lat},${pt.lng}`).join('|');
+    const s = segments.map(seg => `${seg.transportType}:${seg.geometryGeoJson?.length ?? 0}`).join('|');
+    return `${p}#${s}`;
   }
 
-  private makeIcon(color: string): L.DivIcon {
+  private makeIcon(kind: 'start' | 'waypoint' | 'end', index?: number): L.DivIcon {
+    if (kind === 'waypoint') {
+      return L.divIcon({
+        className: 'map-icon map-icon--waypoint',
+        html: `<span>${index ?? 0}</span>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      });
+    }
     return L.divIcon({
-      className: '',
-      html: `<div style="
-        width: 18px; height: 18px;
-        background: ${color};
-        border: 3px solid white;
-        border-radius: 50%;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-      "></div>`,
+      className: `map-icon map-icon--${kind}`,
+      html: '',
       iconSize: [18, 18],
       iconAnchor: [9, 9]
     });

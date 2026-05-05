@@ -7,33 +7,37 @@ export type TransportType =
   | 'CAR'
   | 'MOTORHOME';
 
+export interface Stage {
+  orderIndex: number;
+  transportType: TransportType;
+  endName: string;
+  endLat: number;
+  endLng: number;
+  distance: number;
+  duration: number;
+  geometryGeoJson: string | null;
+}
+
 export interface Tour {
   id: number;
   name: string;
   description: string;
-  fromLocation: string;
-  toLocation: string;
+  fromName: string;
   fromLat: number;
   fromLng: number;
-  toLat: number;
-  toLng: number;
-  transportType: TransportType;
-  tourDistance: number | null;
-  estimatedTime: number | null;
+  totalDistance: number;
+  totalDuration: number;
   tourImagePath: string | null;
-  routeGeometry: string | null;
+  stages: Stage[];
   createdAt: string;
   updatedAt: string;
 }
 
 export interface TourRequest {
   name: string;
-  fromLocation: string;
-  toLocation: string;
+  description?: string;
+  fromName: string;
   fromLat: number;
   fromLng: number;
-  toLat: number;
-  toLng: number;
-  transportType: string;
-  description?: string;
+  stages: { transportType: string; endName: string; endLat: number; endLng: number }[];
 }

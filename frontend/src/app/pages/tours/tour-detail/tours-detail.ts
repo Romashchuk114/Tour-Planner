@@ -1,11 +1,13 @@
-import { Component, EventEmitter, Output, inject, effect } from '@angular/core';
+import { Component, EventEmitter, Output, inject, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TourService } from '../../../services/tour.service';
 import { Tour } from '../../../models/tour.model';
+import { TRANSPORT_LABEL } from '../../../models/transport-types';
 import { TourLogListComponent } from '../tour-log-list/tour-log-list';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import {TourLog} from '../../../models/tour-log.model';
-import { RouteMapComponent } from '../../../components/route-map/route-map.component';
+import { TourLog } from '../../../models/tour-log.model';
+import { MapPoint, MapSegment, RouteMapComponent } from '../../../components/route-map/route-map.component';
+import { segmentColor } from '../../../components/route-map/map-colors';
 
 @Component({
   selector: 'app-tour-detail',
@@ -33,25 +35,30 @@ import { RouteMapComponent } from '../../../components/route-map/route-map.compo
           <div class="info-item clickable-route" (click)="toggleAddressDisplay()" title="Klicken um vollständige/abgekürzte Adresse anzuzeigen">
             <span class="label">Route:</span>
             <span class="value">
-              {{ showFullAddress ? tour.fromLocation : formatLocation(tour.fromLocation) }}
+              {{ showFullAddress ? tour.fromName : formatLocation(tour.fromName) }}
+              @for (stop of intermediateStops(tour); track $index) {
+                &rarr; {{ showFullAddress ? stop : formatLocation(stop) }}
+              }
               &rarr;
-              {{ showFullAddress ? tour.toLocation : formatLocation(tour.toLocation) }}
+              {{ showFullAddress ? destinationName(tour) : formatLocation(destinationName(tour)) }}
             </span>
           </div>
-          <div class="info-item">
-            <span class="label">Transportart:</span>
-            <span class="value">{{ getTransportName(tour.transportType) }}</span>
-          </div>
-          @if (tour.tourDistance) {
+          @if (tour.stages.length > 1) {
             <div class="info-item">
-              <span class="label">Distanz:</span>
-              <span class="value">{{ tour.tourDistance }} km</span>
+              <span class="label">Zwischenstopps:</span>
+              <span class="value">{{ tour.stages.length - 1 }}</span>
             </div>
           }
-          @if (tour.estimatedTime) {
+          @if (tour.totalDistance) {
             <div class="info-item">
-              <span class="label">Dauer:</span>
-              <span class="value">{{ formatDuration(tour.estimatedTime) }}</span>
+              <span class="label">Distanz gesamt:</span>
+              <span class="value">{{ tour.totalDistance }} km</span>
+            </div>
+          }
+          @if (tour.totalDuration) {
+            <div class="info-item">
+              <span class="label">Dauer gesamt:</span>
+              <span class="value">{{ formatDuration(tour.totalDuration) }}</span>
             </div>
           }
         </div>
@@ -63,17 +70,43 @@ import { RouteMapComponent } from '../../../components/route-map/route-map.compo
           </div>
         }
 
+        <!-- Stages Table -->
+        @if (tour.stages.length) {
+          <div class="segments-section">
+            <h3>Etappen</h3>
+            <table class="segments-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Von</th>
+                  <th>Nach</th>
+                  <th>Transport</th>
+                  <th>Distanz</th>
+                  <th>Dauer</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (stage of tour.stages; track stage.orderIndex; let i = $index) {
+                  <tr>
+                    <td><span class="seg-badge" [style.background-color]="segmentColor(i)">{{ i + 1 }}</span></td>
+                    <td>{{ stageFromLabel(tour, i) }}</td>
+                    <td>{{ formatLocation(stage.endName) }}</td>
+                    <td>{{ transportLabel[stage.transportType] }}</td>
+                    <td>{{ stage.distance ? stage.distance + ' km' : '—' }}</td>
+                    <td>{{ formatDuration(stage.duration) || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
         <!-- Route Map -->
         <div class="map-section">
           <h3>Route</h3>
           <app-route-map
-            [routeGeometry]="tour.routeGeometry"
-            [fromLat]="tour.fromLat"
-            [fromLng]="tour.fromLng"
-            [toLat]="tour.toLat"
-            [toLng]="tour.toLng"
-            [fromLabel]="tour.fromLocation"
-            [toLabel]="tour.toLocation">
+            [points]="mapPoints()"
+            [segments]="mapSegments()">
           </app-route-map>
         </div>
 
@@ -106,8 +139,51 @@ export class ToursDetail {
 
   public imageUrl: SafeUrl | null = null;
   private currentImageObjectUrl: string | null = null;
-
   public showFullAddress = false;
+
+  protected readonly transportLabel = TRANSPORT_LABEL;
+  protected readonly segmentColor = segmentColor;
+
+  mapPoints = computed<MapPoint[]>(() => {
+    const tour = this.tourService.selectedTour();
+    if (!tour) return [];
+    const points: MapPoint[] = [
+      { lat: tour.fromLat, lng: tour.fromLng, label: tour.fromName, kind: 'start' }
+    ];
+    tour.stages.forEach((s, i) => {
+      const isLast = i === tour.stages.length - 1;
+      points.push({
+        lat: s.endLat,
+        lng: s.endLng,
+        label: s.endName,
+        kind: isLast ? 'end' : 'waypoint',
+        index: isLast ? undefined : i + 1
+      });
+    });
+    return points;
+  });
+
+  mapSegments = computed<MapSegment[]>(() => {
+    const tour = this.tourService.selectedTour();
+    return tour?.stages.map(s => ({
+      geometryGeoJson: s.geometryGeoJson,
+      transportType: TRANSPORT_LABEL[s.transportType]
+    })) ?? [];
+  });
+
+  intermediateStops(tour: Tour): string[] {
+    return tour.stages.slice(0, -1).map(s => s.endName);
+  }
+
+  destinationName(tour: Tour): string {
+    return tour.stages[tour.stages.length - 1]?.endName ?? '';
+  }
+
+  stageFromLabel(tour: Tour, i: number): string {
+    return i === 0
+      ? this.formatLocation(tour.fromName)
+      : this.formatLocation(tour.stages[i - 1].endName);
+  }
 
   onEditClick(tour: Tour): void {
     this.editTour.emit(tour);
@@ -115,28 +191,13 @@ export class ToursDetail {
 
   onDelete(): void {
     const tourId = this.tourService.selectedTourId();
-    if (tourId) {
-      if (confirm('Sind Sie sicher, dass Sie diese Tour löschen möchten?')) {
-        this.tourService.deleteTour(tourId);
-      }
+    if (tourId && confirm('Sind Sie sicher, dass Sie diese Tour löschen möchten?')) {
+      this.tourService.deleteTour(tourId);
     }
   }
 
   toggleAddressDisplay(): void {
     this.showFullAddress = !this.showFullAddress;
-  }
-
-  getTransportName(type: string): string {
-    switch (type) {
-      case 'WALK': return 'Zu Fuß';
-      case 'HIKING': return 'Wandern';
-      case 'BIKE': return 'Fahrrad';
-      case 'MOUNTAIN_BIKE': return 'Mountainbike';
-      case 'ROAD_BIKE': return 'Rennrad';
-      case 'CAR': return 'Auto';
-      case 'MOTORHOME': return 'Wohnmobil / LKW';
-      default: return type;
-    }
   }
 
   formatLocation(location: string | undefined): string {
@@ -146,17 +207,13 @@ export class ToursDetail {
 
   formatDuration(minutes: number | null | undefined): string {
     if (minutes === null || minutes === undefined) return '';
-
-    if (minutes < 60) {
-      return `${minutes} min`;
-    }
+    if (minutes < 60) return `${minutes} min`;
 
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
 
     if (hours < 24) {
-      if (remainingMinutes === 0) return `${hours} h`;
-      return `${hours} h ${remainingMinutes} min`;
+      return remainingMinutes === 0 ? `${hours} h` : `${hours} h ${remainingMinutes} min`;
     }
 
     const days = Math.floor(hours / 24);
@@ -165,7 +222,6 @@ export class ToursDetail {
     let result = `${days} d`;
     if (remainingHours > 0) result += ` ${remainingHours} h`;
     if (remainingMinutes > 0) result += ` ${remainingMinutes} min`;
-
     return result;
   }
 
@@ -186,7 +242,7 @@ export class ToursDetail {
         }
       },
       error: () => {
-         this.imageUrl = null;
+        this.imageUrl = null;
       }
     });
   }
@@ -197,7 +253,6 @@ export class ToursDetail {
       const tour = this.tourService.selectedTour();
       const imagePath = tour?.tourImagePath;
 
-      // Reset address display when changing tours
       if (tourId) {
         this.showFullAddress = false;
       }
