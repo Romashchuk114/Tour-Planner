@@ -24,6 +24,7 @@ public class TourService {
     private final UserRepository userRepository;
     private final ImageService imageService;
     private final RouteService routeService;
+    private final PdfService pdfService;
 
     @Transactional
     public Tour create(Long userId, TourRequestParams params) {
@@ -88,6 +89,12 @@ public class TourService {
     @Transactional(readOnly = true)
     public String getImagePath(Long id, Long userId) {
         return findTourByUser(id, userId).getTourImagePath();
+    }
+    
+    @Transactional(readOnly = true)
+    public byte[] generateTourReport(Long tourId, Long userId) {
+        Tour tour = findTourByUser(tourId, userId);
+        return pdfService.createTourReport(tour);
     }
 
     @Transactional

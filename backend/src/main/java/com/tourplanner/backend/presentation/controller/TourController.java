@@ -12,6 +12,7 @@ import com.tourplanner.backend.service.TourService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
@@ -77,6 +78,18 @@ public class TourController {
         return ResponseEntity.ok()
                 .contentType(MediaTypeFactory.getMediaType(imagePath).orElse(MediaType.APPLICATION_OCTET_STREAM))
                 .body(resource);
+    }
+    
+    @GetMapping("/{id}/report")
+    public ResponseEntity<byte[]> getTourReport(@PathVariable Long id,
+                                                 @AuthenticationPrincipal AuthenticatedUser user) {
+        byte[] pdfContents = tourService.generateTourReport(id, user.id());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        String filename = "tour_report_" + id + ".pdf";
+        headers.setContentDispositionFormData(filename, filename);
+        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+        return new ResponseEntity<>(pdfContents, headers, HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}/image")

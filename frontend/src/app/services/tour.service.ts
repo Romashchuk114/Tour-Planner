@@ -134,6 +134,12 @@ export class TourService {
     });
   }
 
+  public getTourReport(tourId: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${tourId}/report`, {
+      responseType: 'blob'
+    });
+  }
+
   public deleteTour(id: number): void {
     this.isLoading.set(true);
     this.errorMessage.set('');

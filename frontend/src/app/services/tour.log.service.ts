@@ -22,6 +22,20 @@ export class TourLogService {
   public hasLogs = computed(() => this.logsSignal().length > 0);
   public logCount = computed(() => this.logsSignal().length);
 
+  public averageRating = computed(() => {
+    const currentLogs = this.logs();
+    if (!currentLogs.length) return 0;
+    const total = currentLogs.reduce((sum, log) => sum + log.rating, 0);
+    return total / currentLogs.length;
+  });
+
+  public averageDifficulty = computed(() => {
+    const currentLogs = this.logs();
+    if (!currentLogs.length) return 0;
+    const total = currentLogs.reduce((sum, log) => sum + log.difficulty, 0);
+    return total / currentLogs.length;
+  });
+
   private handleError(err: HttpErrorResponse, defaultMsg: string): void {
     if (err.status === 403 || err.status === 401) {
       this.authService.logout();
