@@ -14,6 +14,14 @@ import {Tour} from '../../../models/tour.model';
         <button class="add-btn" (click)="onNewTourClick()">+ Neue Tour</button>
       </div>
 
+      <input
+        type="search"
+        class="search-input"
+        placeholder="Touren durchsuchen…"
+        [value]="searchQuery"
+        (input)="onSearchInput($any($event.target).value)"
+      >
+
       <hr>
 
       @if (tourService.isLoading()) {
@@ -21,7 +29,9 @@ import {Tour} from '../../../models/tour.model';
       } @else if (tourService.errorMessage()) {
         <div class="error-msg">{{ tourService.errorMessage() }}</div>
       } @else if (!tourService.hasTours()) {
-        <div class="empty-state">Keine Touren vorhanden</div>
+        <div class="empty-state">
+          {{ searchQuery ? 'Keine Touren gefunden' : 'Keine Touren vorhanden' }}
+        </div>
       } @else {
         <ul class="tour-list">
           @for (tour of tourService.tours(); track tour.id) {
@@ -44,6 +54,17 @@ export class ToursList {
   @Output() newTour = new EventEmitter<void>();
 
   public tourService = inject(TourService);
+
+  searchQuery = '';
+  private searchDebounce: ReturnType<typeof setTimeout> | null = null;
+
+  onSearchInput(value: string): void {
+    this.searchQuery = value;
+    if (this.searchDebounce) {
+      clearTimeout(this.searchDebounce);
+    }
+    this.searchDebounce = setTimeout(() => this.tourService.loadTours(this.searchQuery), 300);
+  }
 
   onSelectTour(tour: Tour): void {
     this.tourService.selectTour(tour);

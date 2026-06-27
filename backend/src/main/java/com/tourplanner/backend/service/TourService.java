@@ -1,8 +1,10 @@
 package com.tourplanner.backend.service;
 
 import com.tourplanner.backend.model.Tour;
+import com.tourplanner.backend.model.TourLog;
 import com.tourplanner.backend.model.TourStage;
 import com.tourplanner.backend.model.User;
+import com.tourplanner.backend.data.TourLogRepository;
 import com.tourplanner.backend.data.TourRepository;
 import com.tourplanner.backend.data.UserRepository;
 import com.tourplanner.backend.service.exception.ForbiddenException;
@@ -14,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -21,6 +25,7 @@ import java.util.List;
 public class TourService {
 
     private final TourRepository tourRepository;
+    private final TourLogRepository tourLogRepository;
     private final UserRepository userRepository;
     private final ImageService imageService;
     private final RouteService routeService;
@@ -43,8 +48,48 @@ public class TourService {
     }
 
     @Transactional(readOnly = true)
-    public List<Tour> getAllByUser(Long userId) {
-        return tourRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    public List<Tour> search(Long userId, String query, Map<Long, ComputedAttributes> attributes) {
+        List<Tour> tours = tourRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        if (query == null || query.isBlank()) {
+            return tours;
+        }
+
+        Map<Long, List<TourLog>> logsByTour = tourLogRepository.findByTourUserId(userId).stream()
+                .collect(Collectors.groupingBy(l -> l.getTour().getId()));
+
+        String needle = query.toLowerCase();
+        List<Tour> result = tours.stream()
+                .filter(tour -> buildSearchText(
+                        tour,
+                        logsByTour.getOrDefault(tour.getId(), List.of()),
+                        attributes.getOrDefault(tour.getId(), ComputedAttributes.NONE)
+                ).contains(needle))
+                .toList();
+        log.info("Search '{}': {} von {} Touren gefunden (userId={})", query, result.size(), tours.size(), userId);
+        return result;
+    }
+
+    private String buildSearchText(Tour tour, List<TourLog> logs, ComputedAttributes attributes) {
+        StringBuilder text = new StringBuilder();
+        appendLower(text, tour.getName());
+        appendLower(text, tour.getDescription());
+        appendLower(text, tour.getFromName());
+        for (TourStage stage : tour.getStages()) {
+            appendLower(text, stage.getEndName());
+            appendLower(text, stage.getTransportType().getLabel());
+        }
+        for (TourLog tourLog : logs) {
+            appendLower(text, tourLog.getComment());
+        }
+        appendLower(text, attributes.popularity());
+        appendLower(text, attributes.childFriendliness());
+        return text.toString();
+    }
+
+    private void appendLower(StringBuilder text, String value) {
+        if (value != null) {
+            text.append(value.toLowerCase()).append(' ');
+        }
     }
 
     @Transactional(readOnly = true)
@@ -56,7 +101,7 @@ public class TourService {
     public Tour update(Long id, Long userId, TourRequestParams params) {
         Tour tour = findTourByUser(id, userId);
         applyHeader(tour, params);
-        // Flush DELETE before re-INSERT — sonst kollidiert (tour_id, order_index) UNIQUE im selben Flush
+
         tour.getStages().clear();
         tourRepository.saveAndFlush(tour);
         rebuildStages(tour, params);

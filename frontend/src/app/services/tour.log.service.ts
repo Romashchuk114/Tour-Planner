@@ -2,6 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { TourLog, TourLogRequest } from '../models/tour-log.model';
 import { AuthService } from './auth';
+import { TourService } from './tour.service';
 
 @Injectable({
   providedIn: 'root'
@@ -10,6 +11,7 @@ import { AuthService } from './auth';
 export class TourLogService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private tourService = inject(TourService);
   private apiUrl = 'http://localhost:8080/api/tours';
 
   // State Signals
@@ -21,20 +23,6 @@ export class TourLogService {
   public logs = computed(() => this.logsSignal());
   public hasLogs = computed(() => this.logsSignal().length > 0);
   public logCount = computed(() => this.logsSignal().length);
-
-  public averageRating = computed(() => {
-    const currentLogs = this.logs();
-    if (!currentLogs.length) return 0;
-    const total = currentLogs.reduce((sum, log) => sum + log.rating, 0);
-    return total / currentLogs.length;
-  });
-
-  public averageDifficulty = computed(() => {
-    const currentLogs = this.logs();
-    if (!currentLogs.length) return 0;
-    const total = currentLogs.reduce((sum, log) => sum + log.difficulty, 0);
-    return total / currentLogs.length;
-  });
 
   private handleError(err: HttpErrorResponse, defaultMsg: string): void {
     if (err.status === 403 || err.status === 401) {
@@ -70,6 +58,7 @@ export class TourLogService {
       next: (newLog) => {
         this.logsSignal.update(logs => [newLog, ...logs]);
         this.isLoading.set(false);
+        this.tourService.refreshSelectedTour();
       },
       error: (err) => this.handleError(err, 'Fehler beim Erstellen des Logs.')
     });
@@ -85,6 +74,7 @@ export class TourLogService {
           logs.map(l => l.id === logId ? updatedLog : l)
         );
         this.isLoading.set(false);
+        this.tourService.refreshSelectedTour();
       },
       error: (err) => this.handleError(err, 'Fehler beim Aktualisieren des Logs.')
     });
@@ -98,6 +88,7 @@ export class TourLogService {
       next: () => {
         this.logsSignal.update(logs => logs.filter(l => l.id !== logId));
         this.isLoading.set(false);
+        this.tourService.refreshSelectedTour();
       },
       error: (err) => this.handleError(err, 'Fehler beim Löschen des Logs.')
     });

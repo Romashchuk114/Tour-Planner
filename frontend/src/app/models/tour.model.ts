@@ -27,6 +27,9 @@ export interface Tour {
   fromLng: number;
   totalDistance: number;
   totalDuration: number;
+  logCount: number;
+  popularity: string;
+  childFriendliness: string;
   tourImagePath: string | null;
   stages: Stage[];
   createdAt: string;

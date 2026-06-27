@@ -1,7 +1,6 @@
 import { Component, EventEmitter, Output, inject, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TourService } from '../../../services/tour.service';
-import { TourLogService } from '../../../services/tour.log.service';
 import { Tour } from '../../../models/tour.model';
 import { TRANSPORT_LABEL } from '../../../models/transport-types';
 import { TourLogListComponent } from '../tour-log-list/tour-log-list';
@@ -65,11 +64,11 @@ import { segmentColor } from '../../../components/route-map/map-colors';
           }
           <div class="info-item">
             <span class="label">Popularität:</span>
-            <span class="value">{{ getPopularity() }}</span>
+            <span class="value">{{ tour.popularity }} ({{ tour.logCount }} {{ tour.logCount === 1 ? 'Log' : 'Logs' }})</span>
           </div>
           <div class="info-item">
             <span class="label">Kinderfreundlichkeit:</span>
-            <span class="value">{{ getChildFriendliness() }}</span>
+            <span class="value">{{ tour.childFriendliness }}</span>
           </div>
         </div>
 
@@ -145,7 +144,6 @@ export class ToursDetail {
   @Output() deleteLog = new EventEmitter<number>();
 
   public tourService = inject(TourService);
-  public logService = inject(TourLogService);
   private sanitizer = inject(DomSanitizer);
 
   public imageUrl: SafeUrl | null = null;
@@ -242,26 +240,6 @@ export class ToursDetail {
     if (remainingHours > 0) result += ` ${remainingHours} h`;
     if (remainingMinutes > 0) result += ` ${remainingMinutes} min`;
     return result;
-  }
-
-  getPopularity(): string {
-    const avgRating = this.logService.averageRating();
-    if (avgRating === 0) return 'Noch keine';
-    if (avgRating >= 4.5) return 'Sehr hoch';
-    if (avgRating >= 3.5) return 'Hoch';
-    if (avgRating >= 2.5) return 'Mittel';
-    if (avgRating >= 1.5) return 'Niedrig';
-    return 'Sehr niedrig';
-  }
-
-  getChildFriendliness(): string {
-    const avgDifficulty = this.logService.averageDifficulty();
-    if (avgDifficulty === 0) return 'Unbekannt';
-    if (avgDifficulty <= 3) return 'Sehr hoch';
-    if (avgDifficulty <= 5) return 'Hoch';
-    if (avgDifficulty <= 7) return 'Mittel';
-    else return "Wenig";
-    return 'Niedrig';
   }
 
   loadImage(tourId: number): void {

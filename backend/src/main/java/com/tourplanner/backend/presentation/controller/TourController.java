@@ -6,7 +6,9 @@ import com.tourplanner.backend.model.TourStage;
 import com.tourplanner.backend.presentation.dto.StageResponseDTO;
 import com.tourplanner.backend.presentation.dto.TourRequestDTO;
 import com.tourplanner.backend.presentation.dto.TourResponseDTO;
+import com.tourplanner.backend.service.ComputedAttributes;
 import com.tourplanner.backend.service.StageParam;
+import com.tourplanner.backend.service.TourAttributeService;
 import com.tourplanner.backend.service.TourRequestParams;
 import com.tourplanner.backend.service.TourService;
 import jakarta.validation.Valid;
@@ -23,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tours")
@@ -30,11 +33,16 @@ import java.util.List;
 public class TourController {
 
     private final TourService tourService;
+    private final TourAttributeService tourAttributeService;
 
     @GetMapping
-    public ResponseEntity<List<TourResponseDTO>> getAll(@AuthenticationPrincipal AuthenticatedUser user) {
-        List<Tour> tours = tourService.getAllByUser(user.id());
-        return ResponseEntity.ok(tours.stream().map(this::toResponse).toList());
+    public ResponseEntity<List<TourResponseDTO>> getAll(@AuthenticationPrincipal AuthenticatedUser user,
+                                                         @RequestParam(name = "q", required = false) String query) {
+        Map<Long, ComputedAttributes> attributes = tourAttributeService.computeForUser(user.id());
+        List<Tour> tours = tourService.search(user.id(), query, attributes);
+        return ResponseEntity.ok(tours.stream()
+                .map(tour -> toResponse(tour, attributes.getOrDefault(tour.getId(), ComputedAttributes.NONE)))
+                .toList());
     }
 
     @GetMapping("/{id}")
@@ -119,6 +127,10 @@ public class TourController {
     }
 
     private TourResponseDTO toResponse(Tour tour) {
+        return toResponse(tour, tourAttributeService.computeForTour(tour.getId()));
+    }
+
+    private TourResponseDTO toResponse(Tour tour, ComputedAttributes attributes) {
         List<StageResponseDTO> stages = tour.getStages().stream()
                 .map(s -> new StageResponseDTO(
                         s.getOrderIndex(),
@@ -144,6 +156,9 @@ public class TourController {
                 tour.getFromLng(),
                 Math.round(totalDistance * 100.0) / 100.0,
                 totalDuration,
+                attributes.logCount(),
+                attributes.popularity(),
+                attributes.childFriendliness(),
                 tour.getTourImagePath(),
                 stages,
                 tour.getCreatedAt(),

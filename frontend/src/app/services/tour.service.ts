@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Tour, TourRequest } from '../models/tour.model';
 import { AuthService } from './auth';
 import { Observable } from 'rxjs';
@@ -40,16 +40,29 @@ export class TourService {
     this.isLoading.set(false);
   }
 
-  public loadTours(): void {
+  public loadTours(query?: string): void {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    this.http.get<Tour[]>(this.apiUrl).subscribe({
+    const trimmed = query?.trim();
+    const params = trimmed ? new HttpParams().set('q', trimmed) : new HttpParams();
+
+    this.http.get<Tour[]>(this.apiUrl, { params }).subscribe({
       next: (tours) => {
         this.toursSignal.set(tours);
         this.isLoading.set(false);
       },
       error: (err) => this.handleError(err, 'Fehler beim Laden der Touren.')
+    });
+  }
+
+  public refreshSelectedTour(): void {
+    const id = this.selectedTourId();
+    if (!id) return;
+
+    this.http.get<Tour>(`${this.apiUrl}/${id}`).subscribe({
+      next: (tour) => this.updateTourState(id, tour),
+      error: (err) => this.handleError(err, 'Fehler beim Aktualisieren der Tour.')
     });
   }
 
@@ -111,8 +124,7 @@ export class TourService {
     );
 
     if (this.selectedTourId() === id) {
-      this.selectTour(null);
-      setTimeout(() => this.selectTour(updatedTour), 1);
+      this.selectTour(updatedTour);
     }
     this.isLoading.set(false);
   }
