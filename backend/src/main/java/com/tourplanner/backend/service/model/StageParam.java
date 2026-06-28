@@ -1,4 +1,4 @@
-package com.tourplanner.backend.service;
+package com.tourplanner.backend.service.model;
 
 import com.tourplanner.backend.model.TransportType;
 

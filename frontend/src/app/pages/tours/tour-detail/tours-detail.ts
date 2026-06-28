@@ -21,7 +21,8 @@ import { segmentColor } from '../../../components/route-map/map-colors';
           <div class="actions">
             <button class="edit-btn" (click)="onEditClick(tour)">Bearbeiten</button>
             <button class="delete-btn" (click)="onDelete()">Löschen</button>
-            <button class="export-btn" (click)="onExportPdf(tour.id)">Exportieren</button>
+            <button class="export-btn" (click)="onExportPdf(tour.id)">PDF Report</button>
+            <button class="export-btn" (click)="onExportJson(tour.id)">JSON Export</button>
           </div>
         </div>
 
@@ -203,6 +204,10 @@ export class ToursDetail {
     if (tourId && confirm('Sind Sie sicher, dass Sie diese Tour löschen möchten?')) {
       this.tourService.deleteTour(tourId);
     }
+  }
+
+  onExportJson(tourId: number): void {
+    this.tourService.downloadExport(tourId);
   }
 
   onExportPdf(tourId: number): void {

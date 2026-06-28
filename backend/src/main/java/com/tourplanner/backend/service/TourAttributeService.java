@@ -2,6 +2,7 @@ package com.tourplanner.backend.service;
 
 import com.tourplanner.backend.data.TourLogAggregate;
 import com.tourplanner.backend.data.TourLogRepository;
+import com.tourplanner.backend.service.model.ComputedAttributes;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

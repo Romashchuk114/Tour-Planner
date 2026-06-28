@@ -5,6 +5,7 @@ import com.tourplanner.backend.model.TourLog;
 import com.tourplanner.backend.data.TourLogRepository;
 import com.tourplanner.backend.data.TourRepository;
 import com.tourplanner.backend.service.exception.ForbiddenException;
+import com.tourplanner.backend.service.model.TourLogRequestParams;
 import com.tourplanner.backend.service.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

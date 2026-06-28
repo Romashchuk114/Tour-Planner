@@ -2,6 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Tour, TourRequest } from '../models/tour.model';
 import { AuthService } from './auth';
+import { NotificationService } from './notification.service';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -10,6 +11,7 @@ import { Observable } from 'rxjs';
 export class TourService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private notification = inject(NotificationService);
   private apiUrl = 'http://localhost:8080/api/tours';
 
   // State Signals
@@ -17,7 +19,6 @@ export class TourService {
   private selectedTourSignal = signal<Tour | null>(null);
 
   public isLoading = signal<boolean>(false);
-  public errorMessage = signal<string>('');
 
   // Computed Values
   public tours = computed(() => {
@@ -36,13 +37,12 @@ export class TourService {
       this.authService.logout();
       return;
     }
-    this.errorMessage.set(err.error?.error ?? defaultMsg);
+    this.notification.error(err.error?.error ?? defaultMsg);
     this.isLoading.set(false);
   }
 
   public loadTours(query?: string): void {
     this.isLoading.set(true);
-    this.errorMessage.set('');
 
     const trimmed = query?.trim();
     const params = trimmed ? new HttpParams().set('q', trimmed) : new HttpParams();
@@ -54,6 +54,51 @@ export class TourService {
       },
       error: (err) => this.handleError(err, 'Fehler beim Laden der Touren.')
     });
+  }
+
+  public downloadExport(tourId: number | null = null): void {
+    const url = tourId ? `${this.apiUrl}/${tourId}/export` : `${this.apiUrl}/export`;
+    const filename = tourId ? `tour_${tourId}_export.json` : 'tours_export.json';
+
+    this.http.get(url, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        blob.text()
+          .then(text => JSON.parse(text).tours.length as number)
+          .then(count => this.notification.success(this.tourCount(count) + ' erfolgreich exportiert'))
+          .catch(() => this.notification.success('Export heruntergeladen'));
+      },
+      error: (err) => this.handleError(err, 'Fehler beim Exportieren.')
+    });
+  }
+
+  public importTours(fileContent: string): void {
+    this.isLoading.set(true);
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(fileContent);
+    } catch {
+      this.notification.error('Ungültige Datei: kein gültiges JSON.');
+      this.isLoading.set(false);
+      return;
+    }
+
+    this.http.post<Tour[]>(`${this.apiUrl}/import`, payload).subscribe({
+      next: (imported) => {
+        this.notification.success(this.tourCount(imported.length) + ' erfolgreich importiert');
+        this.loadTours();
+      },
+      error: (err) => this.handleError(err, 'Fehler beim Importieren der Touren.')
+    });
+  }
+
+  private tourCount(count: number): string {
+    return count === 1 ? '1 Tour' : `${count} Touren`;
   }
 
   public refreshSelectedTour(): void {
@@ -72,7 +117,6 @@ export class TourService {
 
   public createTour(req: TourRequest, imageFile: File | null = null): void {
     this.isLoading.set(true);
-    this.errorMessage.set('');
 
     this.http.post<Tour>(this.apiUrl, req).subscribe({
       next: (newTour) => {
@@ -98,7 +142,6 @@ export class TourService {
 
   public updateTour(id: number, req: TourRequest, imageFile: File | null = null): void {
     this.isLoading.set(true);
-    this.errorMessage.set('');
 
     this.http.put<Tour>(`${this.apiUrl}/${id}`, req).subscribe({
       next: (baseUpdatedTour) => {
@@ -154,7 +197,6 @@ export class TourService {
 
   public deleteTour(id: number): void {
     this.isLoading.set(true);
-    this.errorMessage.set('');
 
     this.http.delete(`${this.apiUrl}/${id}`).subscribe({
       next: () => {
@@ -170,7 +212,6 @@ export class TourService {
 
   public deleteTourImage(tourId: number): void {
     this.isLoading.set(true);
-    this.errorMessage.set('');
 
     this.http.delete<Tour>(`${this.apiUrl}/${tourId}/image`).subscribe({
       next: (updatedTour) => {

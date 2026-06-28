@@ -22,12 +22,16 @@ import {Tour} from '../../../models/tour.model';
         (input)="onSearchInput($any($event.target).value)"
       >
 
+      <div class="io-actions">
+        <button class="io-btn" (click)="importInput.click()">Importieren</button>
+        <button class="io-btn" (click)="onExportAll()" [disabled]="!tourService.hasTours()">Alle exportieren</button>
+        <input #importInput type="file" accept=".json,application/json" hidden (change)="onImportFile($event)">
+      </div>
+
       <hr>
 
       @if (tourService.isLoading()) {
         <div class="loading">Loading tours...</div>
-      } @else if (tourService.errorMessage()) {
-        <div class="error-msg">{{ tourService.errorMessage() }}</div>
       } @else if (!tourService.hasTours()) {
         <div class="empty-state">
           {{ searchQuery ? 'Keine Touren gefunden' : 'Keine Touren vorhanden' }}
@@ -72,6 +76,18 @@ export class ToursList {
 
   onNewTourClick(): void {
     this.newTour.emit();
+  }
+
+  onExportAll(): void {
+    this.tourService.downloadExport();
+  }
+
+  onImportFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    file.text().then(content => this.tourService.importTours(content));
+    input.value = '';
   }
 
   destinationName(tour: Tour): string {

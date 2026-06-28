@@ -5,6 +5,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import com.tourplanner.backend.model.TransportType;
 import com.tourplanner.backend.service.exception.RouteServiceException;
+import com.tourplanner.backend.service.model.RouteInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;

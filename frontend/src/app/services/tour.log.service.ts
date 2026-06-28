@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { TourLog, TourLogRequest } from '../models/tour-log.model';
 import { AuthService } from './auth';
 import { TourService } from './tour.service';
+import { NotificationService } from './notification.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,12 +13,12 @@ export class TourLogService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private tourService = inject(TourService);
+  private notification = inject(NotificationService);
   private apiUrl = 'http://localhost:8080/api/tours';
 
   // State Signals
   private logsSignal = signal<TourLog[]>([]);
   public isLoading = signal<boolean>(false);
-  public errorMessage = signal<string>('');
 
   // Computed Values
   public logs = computed(() => this.logsSignal());
@@ -29,13 +30,12 @@ export class TourLogService {
       this.authService.logout();
       return;
     }
-    this.errorMessage.set(err.error?.error ?? defaultMsg);
+    this.notification.error(err.error?.error ?? defaultMsg);
     this.isLoading.set(false);
   }
 
   public loadLogs(tourId: number): void {
     this.isLoading.set(true);
-    this.errorMessage.set('');
 
     this.http.get<TourLog[]>(`${this.apiUrl}/${tourId}/logs`).subscribe({
       next: (logs) => {
@@ -52,7 +52,6 @@ export class TourLogService {
 
   public createLog(tourId: number, req: TourLogRequest): void {
     this.isLoading.set(true);
-    this.errorMessage.set('');
 
     this.http.post<TourLog>(`${this.apiUrl}/${tourId}/logs`, req).subscribe({
       next: (newLog) => {
@@ -66,7 +65,6 @@ export class TourLogService {
 
   public updateLog(tourId: number, logId: number, req: TourLogRequest): void {
     this.isLoading.set(true);
-    this.errorMessage.set('');
 
     this.http.put<TourLog>(`${this.apiUrl}/${tourId}/logs/${logId}`, req).subscribe({
       next: (updatedLog) => {
@@ -82,7 +80,6 @@ export class TourLogService {
 
   public deleteLog(tourId: number, logId: number): void {
     this.isLoading.set(true);
-    this.errorMessage.set('');
 
     this.http.delete(`${this.apiUrl}/${tourId}/logs/${logId}`).subscribe({
       next: () => {

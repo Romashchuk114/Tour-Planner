@@ -6,14 +6,17 @@ import com.tourplanner.backend.model.TourStage;
 import com.tourplanner.backend.presentation.dto.StageResponseDTO;
 import com.tourplanner.backend.presentation.dto.TourRequestDTO;
 import com.tourplanner.backend.presentation.dto.TourResponseDTO;
-import com.tourplanner.backend.service.ComputedAttributes;
-import com.tourplanner.backend.service.StageParam;
+import com.tourplanner.backend.service.model.ComputedAttributes;
+import com.tourplanner.backend.service.model.StageParam;
 import com.tourplanner.backend.service.TourAttributeService;
-import com.tourplanner.backend.service.TourRequestParams;
+import com.tourplanner.backend.service.model.TourExportEnvelope;
+import com.tourplanner.backend.service.TourImportExportService;
+import com.tourplanner.backend.service.model.TourRequestParams;
 import com.tourplanner.backend.service.TourService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -34,6 +37,7 @@ public class TourController {
 
     private final TourService tourService;
     private final TourAttributeService tourAttributeService;
+    private final TourImportExportService tourImportExportService;
 
     @GetMapping
     public ResponseEntity<List<TourResponseDTO>> getAll(@AuthenticationPrincipal AuthenticatedUser user,
@@ -100,6 +104,25 @@ public class TourController {
         return new ResponseEntity<>(pdfContents, headers, HttpStatus.OK);
     }
 
+    @GetMapping("/export")
+    public ResponseEntity<TourExportEnvelope> exportAll(@AuthenticationPrincipal AuthenticatedUser user) {
+        return exportResponse(tourImportExportService.exportAll(user.id()), "tours_export.json");
+    }
+
+    @GetMapping("/{id}/export")
+    public ResponseEntity<TourExportEnvelope> exportOne(@PathVariable Long id,
+                                                         @AuthenticationPrincipal AuthenticatedUser user) {
+        return exportResponse(tourImportExportService.exportOne(id, user.id()), "tour_" + id + "_export.json");
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<List<TourResponseDTO>> importTours(@AuthenticationPrincipal AuthenticatedUser user,
+                                                              @Valid @RequestBody TourExportEnvelope envelope) {
+        List<Tour> imported = tourImportExportService.importTours(user.id(), envelope);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(imported.stream().map(this::toResponse).toList());
+    }
+
     @DeleteMapping("/{id}/image")
     public ResponseEntity<TourResponseDTO> deleteImage(@PathVariable Long id,
                                                         @AuthenticationPrincipal AuthenticatedUser user) {
@@ -112,6 +135,13 @@ public class TourController {
                                         @AuthenticationPrincipal AuthenticatedUser user) {
         tourService.delete(id, user.id());
         return ResponseEntity.noContent().build();
+    }
+
+    private ResponseEntity<TourExportEnvelope> exportResponse(TourExportEnvelope envelope, String filename) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setContentDisposition(ContentDisposition.attachment().filename(filename).build());
+        return new ResponseEntity<>(envelope, headers, HttpStatus.OK);
     }
 
     private TourRequestParams toParams(TourRequestDTO dto) {

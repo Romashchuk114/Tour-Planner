@@ -22,8 +22,6 @@ registerLocaleData(localeDe);
 
       @if (logService.isLoading()) {
         <div class="loading">Logs laden...</div>
-      } @else if (logService.errorMessage()) {
-        <div class="error-msg">{{ logService.errorMessage() }}</div>
       } @else if (!logService.hasLogs()) {
         <div class="empty-state">Keine Logs für diese Tour</div>
       } @else {
