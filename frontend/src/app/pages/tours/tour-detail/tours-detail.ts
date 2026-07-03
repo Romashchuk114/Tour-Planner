@@ -2,6 +2,7 @@ import { Component, EventEmitter, Output, inject, effect, computed } from '@angu
 import { CommonModule } from '@angular/common';
 import { TourService } from '../../../services/tour.service';
 import { Tour } from '../../../models/tour.model';
+import { Weather } from '../../../models/weather.model';
 import { TRANSPORT_LABEL } from '../../../models/transport-types';
 import { TourLogListComponent } from '../tour-log-list/tour-log-list';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
@@ -80,6 +81,37 @@ import { segmentColor } from '../../../components/route-map/map-colors';
           </div>
         }
 
+        <!-- Wetter entlang der Route -->
+        @if (weatherList.length) {
+          <div class="weather-section">
+            <h3>Wetter</h3>
+            <div class="weather-chips">
+              @for (label of weatherChipLabels(tour); track $index) {
+                <button
+                  class="chip"
+                  [class.active]="selectedWeatherIndex === $index"
+                  (click)="selectedWeatherIndex = $index"
+                >{{ label }}</button>
+              }
+            </div>
+            @if (weatherList[selectedWeatherIndex]; as weather) {
+              <div class="weather-current">
+                Aktuell: {{ weather.temperature }}°C · {{ weather.description }} · Wind {{ weather.windSpeed }} km/h
+              </div>
+              <div class="weather-forecast">
+                @for (day of weather.forecast; track day.date) {
+                  <div class="weather-day">
+                    <span class="day">{{ day.date | date:'dd.MM.' }}</span>
+                    <span>{{ day.description }}</span>
+                    <span>{{ day.minTemp }}° / {{ day.maxTemp }}°</span>
+                    <span>Regen: {{ day.rainProbability }}%</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
         <!-- Stages Table -->
         @if (tour.stages.length) {
           <div class="segments-section">
@@ -150,6 +182,9 @@ export class ToursDetail {
   public imageUrl: SafeUrl | null = null;
   private currentImageObjectUrl: string | null = null;
   public showFullAddress = false;
+  public weatherList: Weather[] = [];
+  public selectedWeatherIndex = 0;
+  private weatherTourId: number | null = null;
 
   protected readonly transportLabel = TRANSPORT_LABEL;
   protected readonly segmentColor = segmentColor;
@@ -279,11 +314,35 @@ export class ToursDetail {
         this.showFullAddress = false;
       }
 
+      if (tourId && tourId !== this.weatherTourId) {
+        this.weatherTourId = tourId;
+        this.loadWeather(tourId);
+      } else if (!tourId) {
+        this.weatherTourId = null;
+        this.weatherList = [];
+      }
+
       if (tourId && imagePath) {
         this.loadImage(tourId);
       } else {
         this.imageUrl = null;
       }
     });
+  }
+
+  private loadWeather(tourId: number): void {
+    this.weatherList = [];
+    this.selectedWeatherIndex = 0;
+    this.tourService.getTourWeather(tourId).subscribe({
+      next: (weatherList) => this.weatherList = weatherList,
+      error: () => this.weatherList = []
+    });
+  }
+
+  weatherChipLabels(tour: Tour): string[] {
+    return [
+      this.formatLocation(tour.fromName),
+      ...tour.stages.map(s => this.formatLocation(s.endName))
+    ];
   }
 }

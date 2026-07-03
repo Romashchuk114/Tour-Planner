@@ -12,6 +12,7 @@ import com.tourplanner.backend.service.TourAttributeService;
 import com.tourplanner.backend.service.model.TourExportEnvelope;
 import com.tourplanner.backend.service.TourImportExportService;
 import com.tourplanner.backend.service.model.TourRequestParams;
+import com.tourplanner.backend.service.model.WeatherInfo;
 import com.tourplanner.backend.service.TourService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -102,6 +103,12 @@ public class TourController {
         headers.setContentDispositionFormData(filename, filename);
         headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
         return new ResponseEntity<>(pdfContents, headers, HttpStatus.OK);
+    }
+
+    @GetMapping("/{id}/weather")
+    public ResponseEntity<List<WeatherInfo>> getWeather(@PathVariable Long id,
+                                                         @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok(tourService.getWeather(id, user.id()));
     }
 
     @GetMapping("/export")

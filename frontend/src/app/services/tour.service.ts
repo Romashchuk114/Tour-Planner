@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Tour, TourRequest } from '../models/tour.model';
+import { Weather } from '../models/weather.model';
 import { AuthService } from './auth';
 import { NotificationService } from './notification.service';
 import { Observable } from 'rxjs';
@@ -187,6 +188,10 @@ export class TourService {
     return this.http.get(`${this.apiUrl}/${tourId}/image`, {
       responseType: 'blob'
     });
+  }
+
+  public getTourWeather(tourId: number): Observable<Weather[]> {
+    return this.http.get<Weather[]>(`${this.apiUrl}/${tourId}/weather`);
   }
 
   public getTourReport(tourId: number): Observable<Blob> {

@@ -9,9 +9,11 @@ import com.tourplanner.backend.data.TourRepository;
 import com.tourplanner.backend.data.UserRepository;
 import com.tourplanner.backend.service.exception.ForbiddenException;
 import com.tourplanner.backend.service.model.ComputedAttributes;
+import com.tourplanner.backend.service.model.GeoCoordinate;
 import com.tourplanner.backend.service.model.RouteInfo;
 import com.tourplanner.backend.service.model.StageParam;
 import com.tourplanner.backend.service.model.TourRequestParams;
+import com.tourplanner.backend.service.model.WeatherInfo;
 import com.tourplanner.backend.service.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,6 +37,7 @@ public class TourService {
     private final ImageService imageService;
     private final RouteService routeService;
     private final PdfService pdfService;
+    private final WeatherService weatherService;
 
     @Transactional
     public Tour create(Long userId, TourRequestParams params) {
@@ -140,6 +144,15 @@ public class TourService {
         return findTourByUser(id, userId).getTourImagePath();
     }
     
+    @Transactional(readOnly = true)
+    public List<WeatherInfo> getWeather(Long tourId, Long userId) {
+        Tour tour = findTourByUser(tourId, userId);
+        List<GeoCoordinate> points = new ArrayList<>();
+        points.add(new GeoCoordinate(tour.getFromLat(), tour.getFromLng()));
+        tour.getStages().forEach(s -> points.add(new GeoCoordinate(s.getEndLat(), s.getEndLng())));
+        return weatherService.fetchWeather(points);
+    }
+
     @Transactional(readOnly = true)
     public byte[] generateTourReport(Long tourId, Long userId) {
         Tour tour = findTourByUser(tourId, userId);

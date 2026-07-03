@@ -6,6 +6,7 @@ import com.tourplanner.backend.service.exception.ImageStorageException;
 import com.tourplanner.backend.service.exception.InvalidCredentialsException;
 import com.tourplanner.backend.service.exception.ResourceNotFoundException;
 import com.tourplanner.backend.service.exception.RouteServiceException;
+import com.tourplanner.backend.service.exception.WeatherServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -55,6 +56,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleRouteService(RouteServiceException ex) {
         log.error("Route service error: {}", ex.getMessage(), ex);
         return build(HttpStatus.BAD_GATEWAY, "Routing-Service nicht erreichbar: " + ex.getMessage());
+    }
+
+    @ExceptionHandler(WeatherServiceException.class)
+    public ResponseEntity<ErrorResponseDTO> handleWeatherService(WeatherServiceException ex) {
+        log.error("Weather service error: {}", ex.getMessage(), ex);
+        return build(HttpStatus.BAD_GATEWAY, "Wetterdienst nicht erreichbar");
     }
 
     @ExceptionHandler(IOException.class)
