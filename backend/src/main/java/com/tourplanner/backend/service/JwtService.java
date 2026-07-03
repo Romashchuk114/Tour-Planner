@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Optional;
 
 @Service
 public class JwtService {
@@ -32,19 +33,14 @@ public class JwtService {
                 .compact();
     }
 
-    public AuthenticatedUser extractUser(String token) {
-        Claims claims = extractClaims(token);
-        Long id = Long.parseLong(claims.getSubject());
-        String username = claims.get("username", String.class);
-        return new AuthenticatedUser(id, username);
-    }
-
-    public boolean isTokenValid(String token) {
+    public Optional<AuthenticatedUser> extractUser(String token) {
         try {
-            extractClaims(token);
-            return true;
+            Claims claims = extractClaims(token);
+            Long id = Long.parseLong(claims.getSubject());
+            String username = claims.get("username", String.class);
+            return Optional.of(new AuthenticatedUser(id, username));
         } catch (JwtException | IllegalArgumentException e) {
-            return false;
+            return Optional.empty();
         }
     }
 

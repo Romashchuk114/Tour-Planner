@@ -4,6 +4,7 @@ import { Tour, TourRequest } from '../models/tour.model';
 import { Weather } from '../models/weather.model';
 import { AuthService } from './auth';
 import { NotificationService } from './notification.service';
+import { environment } from '../../environments/environment';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -13,7 +14,7 @@ export class TourService {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private notification = inject(NotificationService);
-  private apiUrl = 'http://localhost:8080/api/tours';
+  private apiUrl = `${environment.apiBaseUrl}/api/tours`;
 
   // State Signals
   private toursSignal = signal<Tour[]>([]);
@@ -34,7 +35,7 @@ export class TourService {
   public selectedTourId = computed(() => this.selectedTourSignal()?.id ?? null);
 
   private handleError(err: HttpErrorResponse, defaultMsg: string): void {
-    if (err.status === 403 || err.status === 401) {
+    if (err.status === 401) {
       this.authService.logout();
       return;
     }

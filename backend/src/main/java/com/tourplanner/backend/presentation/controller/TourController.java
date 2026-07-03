@@ -83,13 +83,12 @@ public class TourController {
     @GetMapping("/{id}/image")
     public ResponseEntity<Resource> getImage(@PathVariable Long id,
                                               @AuthenticationPrincipal AuthenticatedUser user) {
-        String imagePath = tourService.getImagePath(id, user.id());
-        if (imagePath == null) {
+        Resource resource = tourService.loadImage(id, user.id());
+        if (resource == null) {
             return ResponseEntity.notFound().build();
         }
-        Resource resource = tourService.loadImage(id, user.id());
         return ResponseEntity.ok()
-                .contentType(MediaTypeFactory.getMediaType(imagePath).orElse(MediaType.APPLICATION_OCTET_STREAM))
+                .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
                 .body(resource);
     }
     

@@ -140,11 +140,6 @@ public class TourService {
     }
 
     @Transactional(readOnly = true)
-    public String getImagePath(Long id, Long userId) {
-        return findTourByUser(id, userId).getTourImagePath();
-    }
-    
-    @Transactional(readOnly = true)
     public List<WeatherInfo> getWeather(Long tourId, Long userId) {
         Tour tour = findTourByUser(tourId, userId);
         List<GeoCoordinate> points = new ArrayList<>();

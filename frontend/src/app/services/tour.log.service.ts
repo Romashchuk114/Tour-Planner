@@ -4,6 +4,7 @@ import { TourLog, TourLogRequest } from '../models/tour-log.model';
 import { AuthService } from './auth';
 import { TourService } from './tour.service';
 import { NotificationService } from './notification.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -14,7 +15,7 @@ export class TourLogService {
   private authService = inject(AuthService);
   private tourService = inject(TourService);
   private notification = inject(NotificationService);
-  private apiUrl = 'http://localhost:8080/api/tours';
+  private apiUrl = `${environment.apiBaseUrl}/api/tours`;
 
   // State Signals
   private logsSignal = signal<TourLog[]>([]);
@@ -26,7 +27,7 @@ export class TourLogService {
   public logCount = computed(() => this.logsSignal().length);
 
   private handleError(err: HttpErrorResponse, defaultMsg: string): void {
-    if (err.status === 403 || err.status === 401) {
+    if (err.status === 401) {
       this.authService.logout();
       return;
     }

@@ -14,6 +14,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -33,11 +34,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(7);
-        if (jwtService.isTokenValid(token)) {
-            AuthenticatedUser user = jwtService.extractUser(token);
+        Optional<AuthenticatedUser> user = jwtService.extractUser(token);
+        if (user.isPresent()) {
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
                 UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(user, null, List.of());
+                        new UsernamePasswordAuthenticationToken(user.get(), null, List.of());
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         } else {
