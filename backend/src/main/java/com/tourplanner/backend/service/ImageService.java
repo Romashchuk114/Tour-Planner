@@ -8,6 +8,9 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,6 +38,8 @@ public class ImageService {
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             throw new IllegalArgumentException("Dateityp nicht erlaubt: " + extension + ". Erlaubt: " + ALLOWED_EXTENSIONS);
         }
+
+        verifyImageContent(data);
 
         String filename = "tour_" + tourId + "." + extension;
         Path filePath = baseDir.resolve(filename);
@@ -64,6 +69,17 @@ public class ImageService {
             log.info("Image deleted: {}", filename);
         } catch (IOException e) {
             log.warn("Image could not be deleted: {}", filename, e);
+        }
+    }
+
+    private void verifyImageContent(byte[] data) {
+        try {
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(data));
+            if (image == null) {
+                throw new IllegalArgumentException("Datei ist kein gültiges Bild");
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Datei konnte nicht als Bild gelesen werden");
         }
     }
 

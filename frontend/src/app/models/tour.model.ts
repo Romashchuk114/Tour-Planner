@@ -1,25 +1,46 @@
-export type TransportType = 'CAR' | 'WALK' | 'PUBLIC_TRANSPORT' | 'BIKE';
+export type TransportType =
+  | 'WALK'
+  | 'HIKING'
+  | 'BIKE'
+  | 'MOUNTAIN_BIKE'
+  | 'ROAD_BIKE'
+  | 'CAR'
+  | 'MOTORHOME';
+
+export interface Stage {
+  orderIndex: number;
+  transportType: TransportType;
+  endName: string;
+  endLat: number;
+  endLng: number;
+  distance: number;
+  duration: number;
+  geometryGeoJson: string | null;
+}
 
 export interface Tour {
   id: number;
   name: string;
   description: string;
-  fromLocation: string;
-  toLocation: string;
-  transportType: TransportType;
-  tourDistance: number | null;
-  estimatedTime: number | null;
+  fromName: string;
+  fromLat: number;
+  fromLng: number;
+  totalDistance: number;
+  totalDuration: number;
+  logCount: number;
+  popularity: string;
+  childFriendliness: string;
   tourImagePath: string | null;
+  stages: Stage[];
   createdAt: string;
   updatedAt: string;
 }
 
 export interface TourRequest {
   name: string;
-  fromLocation: string;
-  toLocation: string;
-  transportType: string;
   description?: string;
-  tourDistance?: number;
-  estimatedTime?: number;
+  fromName: string;
+  fromLat: number;
+  fromLng: number;
+  stages: { transportType: string; endName: string; endLat: number; endLng: number }[];
 }

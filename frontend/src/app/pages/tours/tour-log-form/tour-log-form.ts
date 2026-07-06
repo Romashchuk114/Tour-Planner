@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { TourLog, TourLogRequest } from '../../../models/tour-log.model';
 import { FormFieldComponent } from '../../../components/form-field/form-field.component';
 
@@ -55,6 +55,7 @@ import { FormFieldComponent } from '../../../components/form-field/form-field.co
 })
 export class TourLogFormComponent implements OnInit {
   @Input() log: TourLog | null = null;
+  @Input() maxDistance: number | null | undefined = null;
   @Output() saved = new EventEmitter<TourLogRequest>();
   @Output() cancelled = new EventEmitter<void>();
 
@@ -92,13 +93,31 @@ export class TourLogFormComponent implements OnInit {
     }
 
     this.logForm = this.fb.group({
-      dateTime: [initialDate, Validators.required],
+      dateTime: [initialDate, [Validators.required, this.futureDateValidator]],
       difficulty: [this.log?.difficulty || 5, [Validators.required, Validators.min(1), Validators.max(10)]],
       rating: [this.log?.rating || 3, [Validators.required, Validators.min(1), Validators.max(5)]],
-      totalDistance: [this.log?.totalDistance || null, [Validators.required, Validators.min(0.1)]],
+      totalDistance: [this.log?.totalDistance || null, [Validators.required, Validators.min(0.1), this.distanceValidator.bind(this)]],
       totalTime: [this.log?.totalTime || null, [Validators.required, Validators.min(1)]],
       comment: [this.log?.comment || '']
     });
+  }
+
+  private futureDateValidator(control: AbstractControl): ValidationErrors | null {
+    if (!control.value) return null;
+    const selectedDate = new Date(control.value).getTime();
+    const now = new Date().getTime();
+    if (selectedDate > now) {
+      return { futureDate: true };
+    }
+    return null;
+  }
+
+  private distanceValidator(control: AbstractControl): ValidationErrors | null {
+    if (!control.value || !this.maxDistance) return null;
+    if (control.value > this.maxDistance) {
+      return { exceedDistance: true };
+    }
+    return null;
   }
 
   getErrorMessage(controlName: string): string | null {
@@ -108,6 +127,8 @@ export class TourLogFormComponent implements OnInit {
     if (control.errors['required']) return 'Dieses Feld ist erforderlich';
     if (control.errors['min']) return `Mindestwert ist ${control.errors['min'].min}`;
     if (control.errors['max']) return `Maximalwert ist ${control.errors['max'].max}`;
+    if (control.errors['futureDate']) return 'Datum darf nicht in der Zukunft liegen';
+    if (control.errors['exceedDistance']) return `Distanz darf max. ${this.maxDistance} km sein`;
 
     return 'Ungültige Eingabe';
   }

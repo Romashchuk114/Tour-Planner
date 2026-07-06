@@ -10,15 +10,29 @@ CREATE TABLE IF NOT EXISTS tours (
     user_id         BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name            VARCHAR(255) NOT NULL,
     description     TEXT,
-    from_location   VARCHAR(255) NOT NULL,
-    to_location     VARCHAR(255) NOT NULL,
-    transport_type  VARCHAR(50) NOT NULL,
-    tour_distance   DOUBLE PRECISION,
-    estimated_time  INTEGER,
+    from_name       VARCHAR(255) NOT NULL,
+    from_lat        DOUBLE PRECISION NOT NULL,
+    from_lng        DOUBLE PRECISION NOT NULL,
     tour_image_path VARCHAR(500),
     created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS tour_stages (
+    id                BIGSERIAL PRIMARY KEY,
+    tour_id           BIGINT NOT NULL REFERENCES tours(id) ON DELETE CASCADE,
+    order_index       INTEGER NOT NULL,
+    transport_type    VARCHAR(50) NOT NULL,
+    end_name          VARCHAR(255) NOT NULL,
+    end_lat           DOUBLE PRECISION NOT NULL,
+    end_lng           DOUBLE PRECISION NOT NULL,
+    distance          DOUBLE PRECISION NOT NULL,
+    duration          INTEGER NOT NULL,
+    geometry_geojson  TEXT,
+    UNIQUE (tour_id, order_index)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tour_stages_tour_id ON tour_stages(tour_id);
 
 CREATE TABLE IF NOT EXISTS tour_logs (
     id              BIGSERIAL PRIMARY KEY,
@@ -33,4 +47,4 @@ CREATE TABLE IF NOT EXISTS tour_logs (
     updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_tour_logs_tour_id ON tour_logs(tour_id);
+CREATE INDEX IF NOT EXISTS idx_tour_logs_tour_id ON tour_logs(tour_id);

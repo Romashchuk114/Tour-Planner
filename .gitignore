@@ -18,3 +18,5 @@ frontend/.angular/
 data/
 
 backend/src/main/resources/application-local.properties
+backend/logs/
+logs/

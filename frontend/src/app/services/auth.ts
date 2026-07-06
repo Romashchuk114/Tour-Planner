@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { environment } from '../../environments/environment';
 
 export interface User {
   id: number;
@@ -19,7 +20,7 @@ export interface AuthResponse extends User {
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private apiUrl = `${environment.apiBaseUrl}/api/auth`;
   private readonly TOKEN_KEY = 'auth_token';
 
   private currentUser = signal<User | null>(this.loadUserFromToken());

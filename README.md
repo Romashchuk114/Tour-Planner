@@ -20,7 +20,11 @@ JWT_SECRET=<min-256-bit-secret>
 JWT_EXPIRATION_MS=<expiration-in-ms>
 
 IMAGE_DIR=<pfad-zu-bildern>
+
+ORS_API_KEY=<openrouteservice-api-key>
 ```
+
+> Den ORS-API-Key gibt es kostenlos auf [openrouteservice.org/dev](https://openrouteservice.org/dev/#/signup) (2.000 Requests/Tag).
 
 In IntelliJ muss diese `.env`-Datei in der Run Configuration eingebunden werden:
 

@@ -4,7 +4,7 @@ import com.tourplanner.backend.config.AuthenticatedUser;
 import com.tourplanner.backend.model.TourLog;
 import com.tourplanner.backend.presentation.dto.TourLogRequestDTO;
 import com.tourplanner.backend.presentation.dto.TourLogResponseDTO;
-import com.tourplanner.backend.service.TourLogRequestParams;
+import com.tourplanner.backend.service.model.TourLogRequestParams;
 import com.tourplanner.backend.service.TourLogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

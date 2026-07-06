@@ -2,13 +2,23 @@ package com.tourplanner.backend.presentation.controller;
 
 import com.tourplanner.backend.config.AuthenticatedUser;
 import com.tourplanner.backend.model.Tour;
+import com.tourplanner.backend.model.TourStage;
+import com.tourplanner.backend.presentation.dto.StageResponseDTO;
 import com.tourplanner.backend.presentation.dto.TourRequestDTO;
 import com.tourplanner.backend.presentation.dto.TourResponseDTO;
-import com.tourplanner.backend.service.TourRequestParams;
+import com.tourplanner.backend.service.model.ComputedAttributes;
+import com.tourplanner.backend.service.model.StageParam;
+import com.tourplanner.backend.service.TourAttributeService;
+import com.tourplanner.backend.service.model.TourExportEnvelope;
+import com.tourplanner.backend.service.TourImportExportService;
+import com.tourplanner.backend.service.model.TourRequestParams;
+import com.tourplanner.backend.service.model.WeatherInfo;
 import com.tourplanner.backend.service.TourService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
@@ -19,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tours")
@@ -26,11 +37,17 @@ import java.util.List;
 public class TourController {
 
     private final TourService tourService;
+    private final TourAttributeService tourAttributeService;
+    private final TourImportExportService tourImportExportService;
 
     @GetMapping
-    public ResponseEntity<List<TourResponseDTO>> getAll(@AuthenticationPrincipal AuthenticatedUser user) {
-        List<Tour> tours = tourService.getAllByUser(user.id());
-        return ResponseEntity.ok(tours.stream().map(this::toResponse).toList());
+    public ResponseEntity<List<TourResponseDTO>> getAll(@AuthenticationPrincipal AuthenticatedUser user,
+                                                         @RequestParam(name = "q", required = false) String query) {
+        Map<Long, ComputedAttributes> attributes = tourAttributeService.computeForUser(user.id());
+        List<Tour> tours = tourService.search(user.id(), query, attributes);
+        return ResponseEntity.ok(tours.stream()
+                .map(tour -> toResponse(tour, attributes.getOrDefault(tour.getId(), ComputedAttributes.NONE)))
+                .toList());
     }
 
     @GetMapping("/{id}")
@@ -66,14 +83,50 @@ public class TourController {
     @GetMapping("/{id}/image")
     public ResponseEntity<Resource> getImage(@PathVariable Long id,
                                               @AuthenticationPrincipal AuthenticatedUser user) {
-        String imagePath = tourService.getImagePath(id, user.id());
-        if (imagePath == null) {
+        Resource resource = tourService.loadImage(id, user.id());
+        if (resource == null) {
             return ResponseEntity.notFound().build();
         }
-        Resource resource = tourService.loadImage(id, user.id());
         return ResponseEntity.ok()
-                .contentType(MediaTypeFactory.getMediaType(imagePath).orElse(MediaType.APPLICATION_OCTET_STREAM))
+                .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
                 .body(resource);
+    }
+    
+    @GetMapping("/{id}/report")
+    public ResponseEntity<byte[]> getTourReport(@PathVariable Long id,
+                                                 @AuthenticationPrincipal AuthenticatedUser user) {
+        byte[] pdfContents = tourService.generateTourReport(id, user.id());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        String filename = "tour_report_" + id + ".pdf";
+        headers.setContentDispositionFormData(filename, filename);
+        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+        return new ResponseEntity<>(pdfContents, headers, HttpStatus.OK);
+    }
+
+    @GetMapping("/{id}/weather")
+    public ResponseEntity<List<WeatherInfo>> getWeather(@PathVariable Long id,
+                                                         @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok(tourService.getWeather(id, user.id()));
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<TourExportEnvelope> exportAll(@AuthenticationPrincipal AuthenticatedUser user) {
+        return exportResponse(tourImportExportService.exportAll(user.id()), "tours_export.json");
+    }
+
+    @GetMapping("/{id}/export")
+    public ResponseEntity<TourExportEnvelope> exportOne(@PathVariable Long id,
+                                                         @AuthenticationPrincipal AuthenticatedUser user) {
+        return exportResponse(tourImportExportService.exportOne(id, user.id()), "tour_" + id + "_export.json");
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<List<TourResponseDTO>> importTours(@AuthenticationPrincipal AuthenticatedUser user,
+                                                              @Valid @RequestBody TourExportEnvelope envelope) {
+        List<Tour> imported = tourImportExportService.importTours(user.id(), envelope);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(imported.stream().map(this::toResponse).toList());
     }
 
     @DeleteMapping("/{id}/image")
@@ -90,25 +143,60 @@ public class TourController {
         return ResponseEntity.noContent().build();
     }
 
+    private ResponseEntity<TourExportEnvelope> exportResponse(TourExportEnvelope envelope, String filename) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setContentDisposition(ContentDisposition.attachment().filename(filename).build());
+        return new ResponseEntity<>(envelope, headers, HttpStatus.OK);
+    }
+
     private TourRequestParams toParams(TourRequestDTO dto) {
+        List<StageParam> stages = dto.stages().stream()
+                .map(s -> new StageParam(
+                        s.transportType(), s.endName(), s.endLat(), s.endLng()))
+                .toList();
         return new TourRequestParams(
-                dto.name(), dto.description(), dto.fromLocation(), dto.toLocation(),
-                dto.transportType(), dto.tourDistance(), dto.estimatedTime()
+                dto.name(), dto.description(),
+                dto.fromName(), dto.fromLat(), dto.fromLng(),
+                stages
         );
     }
 
     private TourResponseDTO toResponse(Tour tour) {
+        return toResponse(tour, tourAttributeService.computeForTour(tour.getId()));
+    }
+
+    private TourResponseDTO toResponse(Tour tour, ComputedAttributes attributes) {
+        List<StageResponseDTO> stages = tour.getStages().stream()
+                .map(s -> new StageResponseDTO(
+                        s.getOrderIndex(),
+                        s.getTransportType().name(),
+                        s.getEndName(),
+                        s.getEndLat(),
+                        s.getEndLng(),
+                        s.getDistance(),
+                        s.getDuration(),
+                        s.getGeometryGeoJson()))
+                .toList();
+
+        double totalDistance = tour.getStages().stream().mapToDouble(TourStage::getDistance).sum();
+        int totalDuration = tour.getStages().stream().mapToInt(TourStage::getDuration).sum();
+
         return new TourResponseDTO(
                 tour.getId(),
                 tour.getUser().getId(),
                 tour.getName(),
                 tour.getDescription(),
-                tour.getFromLocation(),
-                tour.getToLocation(),
-                tour.getTransportType().name(),
-                tour.getTourDistance(),
-                tour.getEstimatedTime(),
+                tour.getFromName(),
+                tour.getFromLat(),
+                tour.getFromLng(),
+                Math.round(totalDistance * 100.0) / 100.0,
+                totalDuration,
+                attributes.logCount(),
+                attributes.popularity(),
+                attributes.childFriendliness(),
                 tour.getTourImagePath(),
+                stages,
                 tour.getCreatedAt(),
                 tour.getUpdatedAt()
         );

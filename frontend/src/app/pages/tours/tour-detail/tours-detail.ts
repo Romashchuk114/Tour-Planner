@@ -1,15 +1,19 @@
-import { Component, EventEmitter, Output, inject, effect } from '@angular/core';
+import { Component, EventEmitter, Output, inject, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TourService } from '../../../services/tour.service';
 import { Tour } from '../../../models/tour.model';
+import { Weather } from '../../../models/weather.model';
+import { TRANSPORT_LABEL } from '../../../models/transport-types';
 import { TourLogListComponent } from '../tour-log-list/tour-log-list';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import {TourLog} from '../../../models/tour-log.model';
+import { TourLog } from '../../../models/tour-log.model';
+import { MapPoint, MapSegment, RouteMapComponent } from '../../../components/route-map/route-map.component';
+import { segmentColor } from '../../../components/route-map/map-colors';
 
 @Component({
   selector: 'app-tour-detail',
   standalone: true,
-  imports: [CommonModule, TourLogListComponent],
+  imports: [CommonModule, TourLogListComponent, RouteMapComponent],
   template: `
     @if (tourService.selectedTour(); as tour) {
       <div class="tour-detail-container">
@@ -18,6 +22,8 @@ import {TourLog} from '../../../models/tour-log.model';
           <div class="actions">
             <button class="edit-btn" (click)="onEditClick(tour)">Bearbeiten</button>
             <button class="delete-btn" (click)="onDelete()">Löschen</button>
+            <button class="export-btn" (click)="onExportPdf(tour.id)">PDF Report</button>
+            <button class="export-btn" (click)="onExportJson(tour.id)">JSON Export</button>
           </div>
         </div>
 
@@ -29,26 +35,43 @@ import {TourLog} from '../../../models/tour-log.model';
         }
 
         <div class="info-grid">
-          <div class="info-item">
+          <div class="info-item clickable-route" (click)="toggleAddressDisplay()" title="Klicken um vollständige/abgekürzte Adresse anzuzeigen">
             <span class="label">Route:</span>
-            <span class="value">{{ tour.fromLocation }} &rarr; {{ tour.toLocation }}</span>
+            <span class="value">
+              {{ showFullAddress ? tour.fromName : formatLocation(tour.fromName) }}
+              @for (stop of intermediateStops(tour); track $index) {
+                &rarr; {{ showFullAddress ? stop : formatLocation(stop) }}
+              }
+              &rarr;
+              {{ showFullAddress ? destinationName(tour) : formatLocation(destinationName(tour)) }}
+            </span>
+          </div>
+          @if (tour.stages.length > 1) {
+            <div class="info-item">
+              <span class="label">Zwischenstopps:</span>
+              <span class="value">{{ tour.stages.length - 1 }}</span>
+            </div>
+          }
+          @if (tour.totalDistance) {
+            <div class="info-item">
+              <span class="label">Distanz gesamt:</span>
+              <span class="value">{{ tour.totalDistance }} km</span>
+            </div>
+          }
+          @if (tour.totalDuration) {
+            <div class="info-item">
+              <span class="label">Dauer gesamt:</span>
+              <span class="value">{{ formatDuration(tour.totalDuration) }}</span>
+            </div>
+          }
+          <div class="info-item">
+            <span class="label">Popularität:</span>
+            <span class="value">{{ tour.popularity }} ({{ tour.logCount }} {{ tour.logCount === 1 ? 'Log' : 'Logs' }})</span>
           </div>
           <div class="info-item">
-            <span class="label">Transportart:</span>
-            <span class="value">{{ getTransportName(tour.transportType) }}</span>
+            <span class="label">Kinderfreundlichkeit:</span>
+            <span class="value">{{ tour.childFriendliness }}</span>
           </div>
-          @if (tour.tourDistance) {
-            <div class="info-item">
-              <span class="label">Distanz:</span>
-              <span class="value">{{ tour.tourDistance }} km</span>
-            </div>
-          }
-          @if (tour.estimatedTime) {
-            <div class="info-item">
-              <span class="label">Dauer:</span>
-              <span class="value">{{ tour.estimatedTime }} min</span>
-            </div>
-          }
         </div>
 
         @if (tour.description) {
@@ -58,13 +81,75 @@ import {TourLog} from '../../../models/tour-log.model';
           </div>
         }
 
-        <!-- Map Placeholder -->
-        <div class="map-section">
-          <div class="map-placeholder">
-            Map integration coming in final submission
-            <br>
-            <small>Route: {{ tour.fromLocation }} to {{ tour.toLocation }}</small>
+        <!-- Wetter entlang der Route -->
+        @if (weatherList.length) {
+          <div class="weather-section">
+            <h3>Wetter</h3>
+            <div class="weather-chips">
+              @for (label of weatherChipLabels(tour); track $index) {
+                <button
+                  class="chip"
+                  [class.active]="selectedWeatherIndex === $index"
+                  (click)="selectedWeatherIndex = $index"
+                >{{ label }}</button>
+              }
+            </div>
+            @if (weatherList[selectedWeatherIndex]; as weather) {
+              <div class="weather-current">
+                Aktuell: {{ weather.temperature }}°C · {{ weather.description }} · Wind {{ weather.windSpeed }} km/h
+              </div>
+              <div class="weather-forecast">
+                @for (day of weather.forecast; track day.date) {
+                  <div class="weather-day">
+                    <span class="day">{{ day.date | date:'dd.MM.' }}</span>
+                    <span>{{ day.description }}</span>
+                    <span>{{ day.minTemp }}° / {{ day.maxTemp }}°</span>
+                    <span>Regen: {{ day.rainProbability }}%</span>
+                  </div>
+                }
+              </div>
+            }
           </div>
+        }
+
+        <!-- Stages Table -->
+        @if (tour.stages.length) {
+          <div class="segments-section">
+            <h3>Etappen</h3>
+            <table class="segments-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Von</th>
+                  <th>Nach</th>
+                  <th>Transport</th>
+                  <th>Distanz</th>
+                  <th>Dauer</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (stage of tour.stages; track stage.orderIndex; let i = $index) {
+                  <tr>
+                    <td><span class="seg-badge" [style.background-color]="segmentColor(i)">{{ i + 1 }}</span></td>
+                    <td>{{ stageFromLabel(tour, i) }}</td>
+                    <td>{{ formatLocation(stage.endName) }}</td>
+                    <td>{{ transportLabel[stage.transportType] }}</td>
+                    <td>{{ stage.distance ? stage.distance + ' km' : '—' }}</td>
+                    <td>{{ formatDuration(stage.duration) || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <!-- Route Map -->
+        <div class="map-section">
+          <h3>Route</h3>
+          <app-route-map
+            [points]="mapPoints()"
+            [segments]="mapSegments()">
+          </app-route-map>
         </div>
 
         <!-- Tour Logs Section -->
@@ -96,6 +181,54 @@ export class ToursDetail {
 
   public imageUrl: SafeUrl | null = null;
   private currentImageObjectUrl: string | null = null;
+  public showFullAddress = false;
+  public weatherList: Weather[] = [];
+  public selectedWeatherIndex = 0;
+  private weatherTourId: number | null = null;
+
+  protected readonly transportLabel = TRANSPORT_LABEL;
+  protected readonly segmentColor = segmentColor;
+
+  mapPoints = computed<MapPoint[]>(() => {
+    const tour = this.tourService.selectedTour();
+    if (!tour) return [];
+    const points: MapPoint[] = [
+      { lat: tour.fromLat, lng: tour.fromLng, label: tour.fromName, kind: 'start' }
+    ];
+    tour.stages.forEach((s, i) => {
+      const isLast = i === tour.stages.length - 1;
+      points.push({
+        lat: s.endLat,
+        lng: s.endLng,
+        label: s.endName,
+        kind: isLast ? 'end' : 'waypoint',
+        index: isLast ? undefined : i + 1
+      });
+    });
+    return points;
+  });
+
+  mapSegments = computed<MapSegment[]>(() => {
+    const tour = this.tourService.selectedTour();
+    return tour?.stages.map(s => ({
+      geometryGeoJson: s.geometryGeoJson,
+      transportType: TRANSPORT_LABEL[s.transportType]
+    })) ?? [];
+  });
+
+  intermediateStops(tour: Tour): string[] {
+    return tour.stages.slice(0, -1).map(s => s.endName);
+  }
+
+  destinationName(tour: Tour): string {
+    return tour.stages[tour.stages.length - 1]?.endName ?? '';
+  }
+
+  stageFromLabel(tour: Tour, i: number): string {
+    return i === 0
+      ? this.formatLocation(tour.fromName)
+      : this.formatLocation(tour.stages[i - 1].endName);
+  }
 
   onEditClick(tour: Tour): void {
     this.editTour.emit(tour);
@@ -103,22 +236,50 @@ export class ToursDetail {
 
   onDelete(): void {
     const tourId = this.tourService.selectedTourId();
-    if (tourId) {
-      if (confirm('Sind Sie sicher, dass Sie diese Tour löschen möchten?')) {
-        this.tourService.deleteTour(tourId);
-      }
+    if (tourId && confirm('Sind Sie sicher, dass Sie diese Tour löschen möchten?')) {
+      this.tourService.deleteTour(tourId);
     }
   }
 
-  getTransportName(type: string): string {
-    switch (type) {
-      case 'WALK': return 'Zu fuß';
-      case 'CAR': return 'Auto';
-      case 'PUBLIC_TRANSPORT': return 'Öffentlicher Verkehr';
-      case 'BIKE': return 'Fahrrad';
-      case 'RUNNING': return 'Laufen';
-      default: return type;
+  onExportJson(tourId: number): void {
+    this.tourService.downloadExport(tourId);
+  }
+
+  onExportPdf(tourId: number): void {
+    this.tourService.getTourReport(tourId).subscribe(blob => {
+      const file = new Blob([blob], { type: 'application/pdf' });
+      const fileURL = URL.createObjectURL(file);
+      window.open(fileURL, '_blank');
+    });
+  }
+
+  toggleAddressDisplay(): void {
+    this.showFullAddress = !this.showFullAddress;
+  }
+
+  formatLocation(location: string | undefined): string {
+    if (!location) return '';
+    return location.split(',')[0].trim();
+  }
+
+  formatDuration(minutes: number | null | undefined): string {
+    if (minutes === null || minutes === undefined) return '';
+    if (minutes < 60) return `${minutes} min`;
+
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+
+    if (hours < 24) {
+      return remainingMinutes === 0 ? `${hours} h` : `${hours} h ${remainingMinutes} min`;
     }
+
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+
+    let result = `${days} d`;
+    if (remainingHours > 0) result += ` ${remainingHours} h`;
+    if (remainingMinutes > 0) result += ` ${remainingMinutes} min`;
+    return result;
   }
 
   loadImage(tourId: number): void {
@@ -138,7 +299,7 @@ export class ToursDetail {
         }
       },
       error: () => {
-         this.imageUrl = null;
+        this.imageUrl = null;
       }
     });
   }
@@ -149,11 +310,39 @@ export class ToursDetail {
       const tour = this.tourService.selectedTour();
       const imagePath = tour?.tourImagePath;
 
+      if (tourId) {
+        this.showFullAddress = false;
+      }
+
+      if (tourId && tourId !== this.weatherTourId) {
+        this.weatherTourId = tourId;
+        this.loadWeather(tourId);
+      } else if (!tourId) {
+        this.weatherTourId = null;
+        this.weatherList = [];
+      }
+
       if (tourId && imagePath) {
         this.loadImage(tourId);
       } else {
         this.imageUrl = null;
       }
     });
+  }
+
+  private loadWeather(tourId: number): void {
+    this.weatherList = [];
+    this.selectedWeatherIndex = 0;
+    this.tourService.getTourWeather(tourId).subscribe({
+      next: (weatherList) => this.weatherList = weatherList,
+      error: () => this.weatherList = []
+    });
+  }
+
+  weatherChipLabels(tour: Tour): string[] {
+    return [
+      this.formatLocation(tour.fromName),
+      ...tour.stages.map(s => this.formatLocation(s.endName))
+    ];
   }
 }

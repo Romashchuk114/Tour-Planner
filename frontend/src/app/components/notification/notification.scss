@@ -1,0 +1,66 @@
+.notification-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.45);
+}
+
+.notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  min-width: 320px;
+  max-width: 90vw;
+  padding: 1.25rem 1.5rem;
+  border-radius: 8px;
+  background-color: white;
+  border-left: 5px solid;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+
+  &.success {
+    border-color: #28a745;
+
+    .title {
+      color: #1e7e34;
+    }
+  }
+
+  &.error {
+    border-color: #dc3545;
+
+    .title {
+      color: #b02a37;
+    }
+  }
+
+  .content {
+    flex: 1;
+  }
+
+  .title {
+    margin: 0 0 0.35rem;
+    font-size: 1.05rem;
+  }
+
+  .text {
+    font-size: 0.95rem;
+    color: #343a40;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: #6c757d;
+    cursor: pointer;
+
+    &:hover {
+      color: #343a40;
+    }
+  }
+}

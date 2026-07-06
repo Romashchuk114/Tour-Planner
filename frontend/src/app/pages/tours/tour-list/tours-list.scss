@@ -35,6 +35,55 @@
   }
 }
 
+.search-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #212529;
+  background-color: white;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+  }
+
+  &::placeholder {
+    color: #adb5bd;
+  }
+}
+
+.io-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+
+  .io-btn {
+    flex: 1;
+    background-color: white;
+    color: #007bff;
+    border: 1px solid #007bff;
+    padding: 0.4rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background-color 0.2s;
+
+    &:hover:not(:disabled) {
+      background-color: #e7f1ff;
+    }
+
+    &:disabled {
+      color: #adb5bd;
+      border-color: #dee2e6;
+      cursor: default;
+    }
+  }
+}
+
 .tour-list {
   list-style: none;
   padding: 0;

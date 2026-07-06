@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -13,7 +14,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -31,13 +34,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(7);
-        if (jwtService.isTokenValid(token)) {
-            AuthenticatedUser user = jwtService.extractUser(token);
+        Optional<AuthenticatedUser> user = jwtService.extractUser(token);
+        if (user.isPresent()) {
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
                 UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(user, null, List.of());
+                        new UsernamePasswordAuthenticationToken(user.get(), null, List.of());
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
+        } else {
+            log.debug("Ungültiges oder abgelaufenes JWT für {} {}", request.getMethod(), request.getRequestURI());
         }
 
         filterChain.doFilter(request, response);

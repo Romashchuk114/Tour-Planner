@@ -1,18 +1,23 @@
 package com.tourplanner.backend.presentation.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record TourResponseDTO(
         Long id,
         Long userId,
         String name,
         String description,
-        String fromLocation,
-        String toLocation,
-        String transportType,
-        Double tourDistance,
-        Integer estimatedTime,
+        String fromName,
+        Double fromLat,
+        Double fromLng,
+        Double totalDistance,
+        Integer totalDuration,
+        long logCount,
+        String popularity,
+        String childFriendliness,
         String tourImagePath,
+        List<StageResponseDTO> stages,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {}
